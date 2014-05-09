@@ -1,4 +1,4 @@
-
+import numpy as np
 import scipy.stats as ss
 
 def lptest(x,y,z,x_err,y_err,z_err):
