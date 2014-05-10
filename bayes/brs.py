@@ -81,19 +81,24 @@ def bygal(fitsfile):
         name = np.array_str(it.value)
         t.add_row()
         t['Name'][-1] = name.upper()
-        idx = np.where((s['GALNAME']==name)*
-                       np.logical_and(
-                np.logical_and((s['CO10']>cut*s['CO10_ERR']), 
-                               (s['CO21']>cut*s['CO21_ERR'])),
-                (s['CO32']>cut*s['CO32_ERR'])))
+
+        idx = np.where(
+            (s['GALNAME']==name)&
+            (s['CO10']>cut*s['CO10_err'])&
+            (s['CO10']>cut*s['CO10_err'])&
+            (s['CO10']>cut*s['CO10_err'])&
+            (s['SPIRE1']> 10.0))
         sub = s[idx]
 
-        idx21 = np.where((s['GALNAME']==name)*
-                    (s['CO10']>cut*s['CO10_ERR'])*(s['CO21']>cut*s['CO21_ERR']))
+        idx21 = np.where((s['GALNAME']==name)&
+                         (s['CO10']>cut*s['CO10_ERR'])&
+                         (s['CO21']>cut*s['CO21_ERR'])&
+                         (s['SPIRE1']> 1.0))
         sub21 = s[idx21]
 
-        idx32 = np.where((s['GALNAME']==name)*
-                        (s['CO32']>cut*s['CO32_ERR'])*(s['CO21']>cut*s['CO21_ERR']))
+        idx32 = np.where((s['GALNAME']==name)&
+                         (s['CO32']>cut*s['CO32_ERR'])&
+                         (s['CO21']>cut*s['CO21_ERR']))
 
         sub32 = s[idx32]
         print(len(sub21),len(sub32),len(sub))
@@ -123,4 +128,4 @@ def bygal(fitsfile):
 
             splt.sampler_plot(sampler,data,name=name)
             summarize(t,sampler)
-    it.iternext()
+        it.iternext()
