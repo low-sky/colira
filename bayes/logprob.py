@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as ss
+import pdb
 
 def lptest(x,y,z,x_err,y_err,z_err):
     theta,phi,scatter = p[0],p[1],p[2]
@@ -44,9 +45,9 @@ def logprob3d(p,x,y,z,x_err,y_err,z_err):
         DeltaY2/Delta2*(y_err**2+sigy**2)+\
         DeltaZ2/Delta2*(z_err**2+sigz**2)
     lp = -0.5*np.nansum(Delta2/Sigma)+\
-        np.nansum(ss.invgamma.logpdf(sigx/x_err**2,1)+\
-                      ss.invgamma.logpdf(sigy/y_err**2,1)+\
-                      ss.invgamma.logpdf(sigz/z_err**2,1))
+        np.nansum(ss.invgamma.logpdf((sigx/x_err)**2,1)+\
+                      ss.invgamma.logpdf((sigy/y_err)**2,1)+\
+                      ss.invgamma.logpdf((sigz/z_err)**2,1))
 
 #-0.5*np.nansum(np.log(\
 #            (x_err**2+sigx**2)+\
@@ -194,51 +195,42 @@ def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
     return lp
 
 
-# def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
-#     theta,phi,xoffset,scatter,badfrac,badvar,badmean = p[0],p[1],p[2],p[3],p[4],p[5],p[6]
-
-#     theta,phi,sigx,sigy,sigz = p[0],p[1],p[2],p[3],p[4]
-#     if np.abs(theta-np.pi/4)>np.pi/4:
-#         return -np.inf
-#     if np.abs(phi-np.pi/4)>np.pi/4:
-#         return -np.inf
-
-#     # Distance between ray at theta, phi and a point x,y,z
-#     #Gamma is the dot product of the data vector along the theoretical lin
-#     Gamma = x*np.sin(theta)*np.cos(phi)+\
-#         y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
-#     DeltaX2 = (x-Gamma*np.sin(theta)*np.cos(phi))**2
-#     DeltaY2 = (y-Gamma*np.sin(theta)*np.sin(phi))**2
-#     DeltaZ2 = (z-Gamma*np.cos(theta))**2
-#     Delta2 = DeltaX2+DeltaY2+DeltaZ2
-#     Sigma = DeltaX2/Delta2*(x_err**2+sigx**2)+\
-#         DeltaY2/Delta2*(y_err**2+sigy**2)+\
-#         DeltaZ2/Delta2*(z_err**2+sigz**2)
-
-
-#         if np.abs(theta-np.pi/4)>np.pi/4:
-#         return -np.inf
-#     if np.abs(phi-np.pi/4)>np.pi/4:
-#         return -np.inf
-#     if scatter<0.0:
-#         return -np.inf
-#     if np.abs(badfrac-0.5)>0.5:
-#         return -np.inf
-#     if badvar<0.0:
-#         return -np.inf
-#     Gamma = (x+xoffset)*np.sin(theta)*np.cos(phi)+\
-#         y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
-#     DeltaX2 = (x+xoffset-Gamma*np.sin(theta)*np.cos(phi))**2
-#     DeltaY2 = (y-Gamma*np.sin(theta)*np.sin(phi))**2
-#     DeltaZ2 = (z-Gamma*np.cos(theta))**2
-#     Delta2 = DeltaX2+DeltaY2+DeltaZ2
-#     Sigma = DeltaX2/Delta2*x_err**2+\
-#         DeltaY2/Delta2*y_err**2+\
-#         DeltaZ2/Delta2*z_err**2+scatter
-#     lp = np.nansum(np.log(np.exp(-0.5*Delta2/Sigma)*(1-badfrac)+\
-#                           np
-
-#         return lp
+def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
+    theta,phi,xoff,scatter,badfrac,badsig,badmn = p[0],p[1],p[2],p[3],p[4],p[5],p[6]
+    if np.abs(theta-np.pi/4)>np.pi/4:
+        return -np.inf
+    if np.abs(phi-np.pi/4)>np.pi/4:
+        return -np.inf
+    if np.abs(badfrac-0.5) > 0.5:
+        return -np.inf
+    
+    datascale = np.percentile(y,90)
+       
+        # Distance between ray at theta, phi and a point x,y,z
+    #Gamma is the dot product of the data vector along the theoretical lin
+    Gamma = (x+xoff)*np.sin(theta)*np.cos(phi)+\
+        y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
+    DeltaX2 = ((x+xoff)-Gamma*np.sin(theta)*np.cos(phi))**2
+    DeltaY2 = (y-Gamma*np.sin(theta)*np.sin(phi))**2
+    DeltaZ2 = (z-Gamma*np.cos(theta))**2
+    Delta2 = DeltaX2+DeltaY2+DeltaZ2
+    Sigma2 = DeltaX2/Delta2*(x_err**2+scatter**2)+\
+        DeltaY2/Delta2*(y_err**2+scatter**2)+\
+        DeltaZ2/Delta2*(z_err**2+scatter**2)
+    goodlp = -0.5*(Delta2/Sigma2)
+    BadDelta = (x-badmn*np.cos(phi)*np.sin(theta))**2+\
+        (y-badmn*np.sin(phi)*np.sin(theta))**2+\
+        (z-badmn*np.cos(theta))**2
+    badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+    lp = np.sum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
+        ss.norm.logpdf(badfrac/0.001)+\
+        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2+z_err**2),1))+\
+        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2+z_err**2)/10,1))+\
+        np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))
+# factor of 10 to make badsig really big.
+    if np.isnan(lp):
+        pdb.set_trace()
+    return lp
 
 def logprob2d_kelly(p,x,y,x_err,y_err):
     sigy,sigx,rho,mux = p[0],p[1],p[2],p[3]

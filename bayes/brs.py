@@ -10,6 +10,37 @@ from astropy.table import Table, Column
 import pdb
 rc('text',usetex=True)
 
+
+def logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
+    theta,phi,xoff,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
+        sampler.flatchain[:,1],\
+        sampler.flatchain[:,2],\
+        sampler.flatchain[:,3],\
+        sampler.flatchain[:,4],\
+        sampler.flatchain[:,5],\
+        sampler.flatchain[:,6]
+    pbad = np.zeros(x.size)
+    for idx,value in enumerate(x):
+        Gamma = (x[idx]+xoff)*np.sin(theta)*np.cos(phi)+\
+            y[idx]*np.sin(theta)*np.sin(phi)+z[idx]*np.cos(theta)
+        DeltaX2 = ((x[idx]+xoff)-Gamma*np.sin(theta)*np.cos(phi))**2
+        DeltaY2 = (y[idx]-Gamma*np.sin(theta)*np.sin(phi))**2
+        DeltaZ2 = (z[idx]-Gamma*np.cos(theta))**2
+        Delta2 = DeltaX2+DeltaY2+DeltaZ2
+        Sigma2 = DeltaX2/Delta2*(x_err[idx]**2+scatter**2)+\
+            DeltaY2/Delta2*(y_err[idx]**2+scatter**2)+\
+            DeltaZ2/Delta2*(z_err[idx]**2+scatter**2)
+        goodlp = -0.5*(Delta2/Sigma2)
+        BadDelta = (x[idx]-badmn*np.cos(phi)*np.sin(theta))**2+\
+            (y[idx]-badmn*np.sin(phi)*np.sin(theta))**2+\
+            (z[idx]-badmn*np.cos(theta))**2
+        badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+# run percentiles over chains!
+        pbad[idx] = np.percentile(np.exp(badlp)/(np.exp(badlp)+np.exp(goodlp)),50)
+    return pbad
+
+
+
 def summarize(t,sampler):
     """
     Summarizes a sampler behavior into the output table
@@ -61,7 +92,7 @@ def table_template():
                           'f8','f8','f8','f8','f8','f8'))
     return t
 
-def bygal(fitsfile):
+def bygal(fitsfile,spire_cut=10.0):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
@@ -82,23 +113,24 @@ def bygal(fitsfile):
         t.add_row()
         t['Name'][-1] = name.upper()
 
-        idx = np.where(
-            (s['GALNAME']==name)&
-            (s['CO10']>cut*s['CO10_err'])&
-            (s['CO10']>cut*s['CO10_err'])&
-            (s['CO10']>cut*s['CO10_err'])&
-            (s['SPIRE1']> 10.0))
-        sub = s[idx]
+        SignifData = ((s['CO10']>cut*s['CO10_ERR'])&
+                        (s['CO21']>cut*s['CO21_ERR'])&
+                        (s['CO32']>cut*s['CO32_ERR'])&
+                        (s['INTERF']==0)&
+                        (s['GALNAME']==name)&
+                        (s['SPIRE1']> spire_cut))
+        sub = s[SignifData]
 
         idx21 = np.where((s['GALNAME']==name)&
                          (s['CO10']>cut*s['CO10_ERR'])&
                          (s['CO21']>cut*s['CO21_ERR'])&
-                         (s['SPIRE1']> 1.0))
+                         (s['SPIRE1']> spire_cut))
         sub21 = s[idx21]
 
         idx32 = np.where((s['GALNAME']==name)&
                          (s['CO32']>cut*s['CO32_ERR'])&
-                         (s['CO21']>cut*s['CO21_ERR']))
+                         (s['CO21']>cut*s['CO21_ERR'])&
+                         (s['SPIRE1']>spire_cut))
 
         sub32 = s[idx32]
         print(len(sub21),len(sub32),len(sub))
@@ -111,28 +143,41 @@ def bygal(fitsfile):
             z_err = sub['CO32_ERR']
             t['Npts'][-1]=x.size
             data = dict(x=x,x_err=x_err,y=y,y_err=y_err,z=z,z_err=z_err)
-            ndim, nwalkers = 5,50
+            # ndim, nwalkers = 5,50
+            # p0 = np.zeros((nwalkers,ndim))
+            # p0[:,0] = np.pi/4+np.random.randn(nwalkers)*np.pi/8
+            # p0[:,1] = np.pi/4+np.random.randn(nwalkers)*np.pi/8
+            # p0[:,2] = (np.random.randn(nwalkers))**2
+            # p0[:,3] = (np.random.randn(nwalkers))**2
+            # p0[:,4] = (np.random.randn(nwalkers))**2
+
+            ndim, nwalkers = 7,50
             p0 = np.zeros((nwalkers,ndim))
-            p0[:,0] = np.pi/4+np.random.randn(nwalkers)*np.pi/8
-            p0[:,1] = np.pi/4+np.random.randn(nwalkers)*np.pi/8
-            p0[:,2] = (np.random.randn(nwalkers))**2
-            p0[:,3] = (np.random.randn(nwalkers))**2
-            p0[:,4] = (np.random.randn(nwalkers))**2
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d, 
+            p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+            p0[:,1] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+            p0[:,2] = (np.random.randn(nwalkers))*np.median(x_err) # xoffset
+            p0[:,3] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2+np.median(z_err)**2) # scatter
+            p0[:,4] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
+            p0[:,5] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
+            p0[:,6] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+            
+            
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_xoff_scatter_mixture,
                                         args=[x,y,z,x_err,y_err,z_err])
             pos, prob, state = sampler.run_mcmc(p0, 400)
             sampler.reset()
             sampler.run_mcmc(pos,1000)
             print(name,np.mean(sampler.acceptance_fraction),
                   1/np.tan(np.median(sampler.flatchain[:,0])))
-
-            splt.sampler_plot(sampler,data,name=name)
+            badprob = logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
+            splt.sampler_plot_mixture(sampler,data,name=name,badprob=badprob)
             summarize(t,sampler)
         it.iternext()
 
 def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
-                                  'STELLARSD','MOLRAT','PRESSURE']):
+                                  'STELLARSD','MOLRAT','PRESSURE'],
+                                  spire_cut=10.0):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
@@ -152,17 +197,17 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
 
     # Identify significant emission on keys
 
-    SignifData = ((s['CO10']>cut*s['CO10_err'])&
-                  (s['CO10']>cut*s['CO10_err'])&
-                  (s['CO10']>cut*s['CO10_err'])&
+    SignifData = ((s['CO10']>cut*s['CO10_ERR'])&
+                  (s['CO21']>cut*s['CO21_ERR'])&
+                  (s['CO32']>cut*s['CO32_ERR'])&
                   (s['INTERF']==0)&
-                  (s['SPIRE1']> 10.0))
+                  (s['SPIRE1']> spire_cut))
     sub = s[SignifData]
 
     Signif21 = ((s['CO10']>cut*s['CO10_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 (s['INTERF']==0)&\
-                (s['SPIRE1']> 1.0))
+                (s['SPIRE1']> spire_cut))
     sub21 = s[Signif21]
 
     Signif32 = ((s['CO32']>cut*s['CO32_ERR'])&\
