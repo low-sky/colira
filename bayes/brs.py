@@ -424,4 +424,14 @@ def bycategory(fitsfile,category=['SPIRE1','RGALNORM','FUV',
                 summarize(t,sampler)
 
             it.iternext()
+        t.write('brs_category.'+keyname+'.txt',format='ascii')
+        t2 = Table(t,copy=True)
+        t2.remove_columns(('theta','phi','theta+','phi+','theta-','phi-'))
+        emptystring = np.empty((len(t2)),dtype='string')
+        emptystring[:]=''
+        col = Column(name='blank',data=emptystring)
+        t2.add_column(col,index=4)
+        col = Column(name='blank2',data=emptystring)
+        t2.add_column(col,index=8)
+        t2.write('brs_category.'+keyname+'.tex',format='latex')
         iter2.iternext()
