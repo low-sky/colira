@@ -107,6 +107,8 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
     p.close()
     p.clf()
 
+
+
 def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None):
     x = data['x']
     y = data['y']
@@ -154,6 +156,33 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     p.xlabel(r'$R_{21}$')
     p.ylabel(r'Offset')
     p.tight_layout()
+    p.savefig(figdir+name+suffix+'.pdf',format='pdf',
+              orientation='portrait')
+    p.close()
+    p.clf()
+
+
+def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None):
+    x = data['x']
+    y = data['y']
+    x_err = data['x_err']
+    y_err = data['y_err']
+    p.copper()
+
+    p.figure(figsize=(6,6))
+    p.subplot(111)
+    p.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker=None,mew=0,color=badprob,cmap='copper')
+    p.scatter(x,y,marker='o',color=badprob,cmap='copper')
+    p.xlabel('CO(lower)')
+    p.ylabel('CO(upper)')
+
+    testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
+    if sampler.flatchain.shape[1] == 6:
+        xoff = np.median(sampler.flatchain[:,1])
+    else:
+        xoff = 0
+    p.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
+#    p.tight_layout()
     p.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
     p.close()
