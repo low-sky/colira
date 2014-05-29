@@ -10,8 +10,6 @@ def lptest(x,y,z,x_err,y_err,z_err):
         return -np.inf
     if scatter<0.0:
         return -np.inf
-# Distance between ray at theta, phi and a point x,y,z
-#Gamma is the dot product of the data vector along the theoretical line
     Gamma = x*np.sin(theta)*np.cos(phi)+\
         y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
     DeltaX2 = (x-Gamma*np.sin(theta)*np.cos(phi))**2
@@ -152,48 +150,56 @@ def logprob2d_scatter(p,x,y,x_err,y_err):
         np.nansum(ss.invgamma.logpdf(scattery**2/(y_err**2),1))
     return lp
 
-def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
-    theta,scatterx,scattery,xoff,badfrac,badmn,badsig= p[0],p[1],p[2],\
-      p[3],p[4],p[5],p[6]
+
+def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
+    theta,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
+      p[3],p[4]
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
     if np.abs(badfrac-0.5)>0.5:
         return -np.inf
+    datascale = np.percentile(x,90)
+
+    xoff = 0
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
-    Sigma = (np.sin(theta))**2*(x_err**2+scatterx**2)+\
-        (np.cos(theta))**2*(y_err**2+scattery**2)
+    Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
+        (np.cos(theta))**2*(y_err**2+scatter**2)
     goodlp = -0.5*(Delta/Sigma)
-    BadDelta = (x-badmn*np.cos(theta))**2+(y-badmn*np.sin(theta))**2
+    BadDelta = (y-badmn*np.sin(theta))**2+(x-badmn*np.cos(theta))**2
     badlp =-0.5*(BadDelta/(Sigma+badsig**2))
-#    print(badlp,goodlp)
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
-        +ss.norm.logpdf(badfrac/0.005)+\
-        np.nansum(ss.invgamma.logpdf(scatterx**2/(x_err**2),1))+\
-        np.nansum(ss.invgamma.logpdf(scattery**2/(y_err**2),1))
+        +ss.norm.logpdf(badfrac/0.001)+\
+        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
+        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
+        np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))
+# factor of 10 to make badsig really big.
+    if np.isnan(lp):
+        pdb.set_trace()
     return lp
 
-
-def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
-    theta,scatterx,scattery,badfrac,badmn,badsig= p[0],p[1],p[2],\
+def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
+    theta,xoff,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
       p[3],p[4],p[5]
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
     if np.abs(badfrac-0.5)>0.5:
         return -np.inf
-    xoff = 0
+    datascale = np.percentile(x,90)
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
-    Sigma = (np.sin(theta))**2*(x_err**2+scatterx**2)+\
-        (np.cos(theta))**2*(y_err**2+scattery**2)
+    Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
+        (np.cos(theta))**2*(y_err**2+scatter**2)
     goodlp = -0.5*(Delta/Sigma)
-    BadDelta = (y-badmn*np.cos(theta))**2+(x-badmn*np.sin(theta))**2
+    BadDelta = (y-badmn*np.sin(theta))**2+(x-badmn*np.cos(theta))**2
     badlp =-0.5*(BadDelta/(Sigma+badsig**2))
-#    print(badlp,goodlp)
+
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
         +ss.norm.logpdf(badfrac/0.005)+\
-        np.nansum(ss.invgamma.logpdf(scatterx**2/(x_err**2),1))+\
-        np.nansum(ss.invgamma.logpdf(scattery**2/(y_err**2),1))
+        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
+        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
+        np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))
+    if np.isnan(lp):
+        pdb.set_trace()
     return lp
-
 
 def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
     theta,phi,xoff,scatter,badfrac,badsig,badmn = p[0],p[1],p[2],p[3],p[4],p[5],p[6]
@@ -206,7 +212,7 @@ def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
     
     datascale = np.percentile(y,90)
        
-        # Distance between ray at theta, phi and a point x,y,z
+    # Distance between ray at theta, phi and a point x,y,z
     #Gamma is the dot product of the data vector along the theoretical lin
     Gamma = (x+xoff)*np.sin(theta)*np.cos(phi)+\
         y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
@@ -223,7 +229,7 @@ def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
         (z-badmn*np.cos(theta))**2
     badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
     lp = np.sum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
-        ss.norm.logpdf(badfrac/0.001)+\
+        ss.norm.logpdf(badfrac/0.005)+\
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2+z_err**2),1))+\
         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2+z_err**2)/10,1))+\
         np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))
