@@ -10,8 +10,37 @@ from astropy.table import Table, Column
 import pdb
 rc('text',usetex=True)
 
-
 def logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
+    theta,phi,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
+        sampler.flatchain[:,1],\
+        sampler.flatchain[:,2],\
+        sampler.flatchain[:,3],\
+        sampler.flatchain[:,4],\
+        sampler.flatchain[:,5]
+    xoff=0
+    pbad = np.zeros(x.size)
+    for idx,value in enumerate(x):
+        Gamma = (x[idx]+xoff)*np.sin(theta)*np.cos(phi)+\
+            y[idx]*np.sin(theta)*np.sin(phi)+z[idx]*np.cos(theta)
+        DeltaX2 = ((x[idx]+xoff)-Gamma*np.sin(theta)*np.cos(phi))**2
+        DeltaY2 = (y[idx]-Gamma*np.sin(theta)*np.sin(phi))**2
+        DeltaZ2 = (z[idx]-Gamma*np.cos(theta))**2
+        Delta2 = DeltaX2+DeltaY2+DeltaZ2
+        Sigma2 = DeltaX2/Delta2*(x_err[idx]**2+scatter**2)+\
+            DeltaY2/Delta2*(y_err[idx]**2+scatter**2)+\
+            DeltaZ2/Delta2*(z_err[idx]**2+scatter**2)
+        goodlp = -0.5*(Delta2/Sigma2)
+        BadDelta = (x[idx]-badmn*np.cos(phi)*np.sin(theta))**2+\
+            (y[idx]-badmn*np.sin(phi)*np.sin(theta))**2+\
+            (z[idx]-badmn*np.cos(theta))**2
+        badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+# run percentiles over chains!
+        pbad[idx] = np.percentile(np.exp(badlp)/(np.exp(badlp)+np.exp(goodlp)),50)
+    return pbad
+
+
+
+def logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
     theta,phi,xoff,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
         sampler.flatchain[:,1],\
         sampler.flatchain[:,2],\
@@ -213,14 +242,14 @@ def bygal(fitsfile,spire_cut=10.0):
             sampler.run_mcmc(pos,1000)
             print(name,np.mean(sampler.acceptance_fraction),
                   1/np.tan(np.median(sampler.flatchain[:,0])))
-            badprob = logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
+            badprob = logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
             splt.sampler_plot_mixture(sampler,data,name=name,badprob=badprob)
             summarize(t,sampler)
         it.iternext()
 
 def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
-                                  'STELLARSD','MOLRAT','PRESSURE'],
+                                  'STELLARSD','MOLRAT','PRESSURE','RGAL'],
                                   spire_cut=10.0):
     category = np.array(category)
     s = fits.getdata(fitsfile)
@@ -298,22 +327,22 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
         t=table_template()
         while not it.finished:
             pct = it.index
-            name = np.array_str(it.value)
+            name = (keyname+'_'+np.array_str(it.value)).upper()
             t.add_row()
-            t['Name'][pct] = name.upper()
+            t['Name'][-1] = name
 
             lower_score =scipy.stats.scoreatpercentile(keyscores,\
                                                            lower_percentiles[pct])
             upper_score =scipy.stats.scoreatpercentile(keyscores,\
                                                            upper_percentiles[pct])
 
-            t['LowKey'][pct] = np.log10(lower_score)
-            t['HighKey'][pct] = np.log10(upper_score)
+            t['LowKey'][-1] = np.log10(lower_score)
+            t['HighKey'][-1] = np.log10(upper_score)
             print(lower_score,upper_score)
             idx = np.where((key_variable>=lower_score)&
                            (key_variable<=upper_score)&(SignifData))
             sub = s[idx]
-            t['MedKey'][pct] =np.log10(np.median(key_variable[idx]))
+            t['MedKey'][-1] =np.log10(np.median(key_variable[idx]))
 
             idx21 = np.where((key_variable>=lower_score)&
                            (key_variable<=upper_score)&(Signif21))
@@ -331,23 +360,30 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 y_err = sub['CO21_ERR']
                 z = sub['CO32']
                 z_err = sub['CO32_ERR']
-                ndim, nwalkers = 5,50
+                t['Npts'][-1]=x.size
+                data = dict(x=x,x_err=x_err,y=y,y_err=y_err,z=z,z_err=z_err)
+
+                ndim, nwalkers = 6,50
                 p0 = np.zeros((nwalkers,ndim))
+                p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+                p0[:,1] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+                p0[:,2] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2+np.median(z_err)**2) # scatter
+                p0[:,3] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
+                p0[:,4] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
-                p0[:,0] = np.pi/2*np.random.rand(nwalkers)
-                p0[:,1] = np.pi/2*np.random.rand(nwalkers)
-                p0[:,2] = (np.random.randn(nwalkers))**2
-                p0[:,3] = (np.random.randn(nwalkers))**2
-                p0[:,4] = (np.random.randn(nwalkers))**2
-
-                sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d, 
+                sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_scatter_mixture,
                                             args=[x,y,z,x_err,y_err,z_err])
-                pos, prob, state = sampler.run_mcmc(p0, 200)
-                sampler.reset()
-                sampler.run_mcmc(pos, 1000)
 
-                splt.sampler_plot(sampler,data,name=name)
+                pos, prob, state = sampler.run_mcmc(p0, 400)
+                sampler.reset()
+                sampler.run_mcmc(pos,1000)
+                print(name,np.mean(sampler.acceptance_fraction),
+                      1/np.tan(np.median(sampler.flatchain[:,0])))
+                badprob = logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
+                splt.sampler_plot_mixture(sampler,data,name=name,badprob=badprob)
                 summarize(t,sampler)
+
             it.iternext()
     iter2.iternext()
 

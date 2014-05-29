@@ -238,6 +238,44 @@ def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
         pdb.set_trace()
     return lp
 
+def logprob3d_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
+    theta,phi,scatter,badfrac,badsig,badmn = p[0],p[1],p[2],p[3],p[4],p[5]
+    if np.abs(theta-np.pi/4)>np.pi/4:
+        return -np.inf
+    if np.abs(phi-np.pi/4)>np.pi/4:
+        return -np.inf
+    if np.abs(badfrac-0.5) > 0.5:
+        return -np.inf
+    xoff = 0.0
+    datascale = np.percentile(y,90)
+       
+        # Distance between ray at theta, phi and a point x,y,z
+    #Gamma is the dot product of the data vector along the theoretical lin
+    Gamma = (x+xoff)*np.sin(theta)*np.cos(phi)+\
+        y*np.sin(theta)*np.sin(phi)+z*np.cos(theta)
+    DeltaX2 = ((x+xoff)-Gamma*np.sin(theta)*np.cos(phi))**2
+    DeltaY2 = (y-Gamma*np.sin(theta)*np.sin(phi))**2
+    DeltaZ2 = (z-Gamma*np.cos(theta))**2
+    Delta2 = DeltaX2+DeltaY2+DeltaZ2
+    Sigma2 = DeltaX2/Delta2*(x_err**2+scatter**2)+\
+        DeltaY2/Delta2*(y_err**2+scatter**2)+\
+        DeltaZ2/Delta2*(z_err**2+scatter**2)
+    goodlp = -0.5*(Delta2/Sigma2)
+    BadDelta = (x-badmn*np.cos(phi)*np.sin(theta))**2+\
+        (y-badmn*np.sin(phi)*np.sin(theta))**2+\
+        (z-badmn*np.cos(theta))**2
+    badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+    lp = np.sum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
+        ss.norm.logpdf(badfrac/0.001)+\
+        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2+z_err**2),1))+\
+        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2+z_err**2)/10,1))+\
+        np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))
+# factor of 10 to make badsig really big.
+    if np.isnan(lp):
+        pdb.set_trace()
+    return lp
+
+
 def logprob2d_kelly(p,x,y,x_err,y_err):
     sigy,sigx,rho,mux = p[0],p[1],p[2],p[3]
 #    mux=0
