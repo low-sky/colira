@@ -638,5 +638,4 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 summarize2d(t,sampler21=sampler)
                 t.write('brs_category.'+keyname+'.txt',format='ascii')
             it.iternext()
-
-    iter2.iternext()
+        iter2.iternext()
