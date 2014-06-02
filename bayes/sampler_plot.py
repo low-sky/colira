@@ -169,23 +169,23 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
     y = data['y']
     x_err = data['x_err']
     y_err = data['y_err']
-    p.copper()
+    plt.copper()
 
-    p.figure(figsize=(6,6))
-    p.subplot(111)
-    p.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker=None,mew=0,color=badprob,cmap='copper')
-    p.scatter(x,y,marker='o',color=badprob,cmap='copper')
-    p.xlabel('CO(lower)')
-    p.ylabel('CO(upper)')
+    plt.figure(figsize=(6,6))
+    plt.subplot(111)
+    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='copper_r')
+    plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',c=badprob,alpha=0.3)
+    plt.xlabel('CO(lower)')
+    plt.ylabel('CO(upper)')
 
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
     if sampler.flatchain.shape[1] == 6:
         xoff = np.median(sampler.flatchain[:,1])
     else:
         xoff = 0
-    p.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
+    plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
 #    p.tight_layout()
-    p.savefig(figdir+name+suffix+'.pdf',format='pdf',
+    plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
-    p.close()
-    p.clf()
+    plt.close()
+    plt.clf()

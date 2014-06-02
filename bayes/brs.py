@@ -488,7 +488,6 @@ def bygal2d(fitsfile,spire_cut=10.0):
             badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
             splt.sampler_plot2d_mixture(sampler,data,name=name+'.32',badprob=badprob)
             summarize2d(t,sampler32=sampler)
-        pdb.set_trace()
         it.iternext()
 
 def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
