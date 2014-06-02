@@ -245,6 +245,7 @@ def bygal(fitsfile,spire_cut=10.0):
             badprob = logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
             splt.sampler_plot_mixture(sampler,data,name=name,badprob=badprob)
             summarize(t,sampler)
+            t.write('brs.bygal.txt',format='ascii')
         it.iternext()
 
 def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
@@ -488,6 +489,7 @@ def bygal2d(fitsfile,spire_cut=10.0):
             badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
             splt.sampler_plot2d_mixture(sampler,data,name=name+'.32',badprob=badprob)
             summarize2d(t,sampler32=sampler)
+            t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
 
 def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
@@ -634,5 +636,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
                 splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.32',badprob=badprob)
                 summarize2d(t,sampler21=sampler)
+                t.write('brs_category.'+keyname+'.txt',format='ascii')
             it.iternext()
+
     iter2.iternext()
