@@ -173,7 +173,7 @@ def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
         np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))+\
-        ss.beta.logpdf(2*theta/np.pi,20,40)
+        ss.beta.logpdf(2*theta/np.pi,2,4)
 # factor of 10 to make badsig really big.
     if np.isnan(lp):
         pdb.set_trace()
@@ -199,7 +199,7 @@ def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
         np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))+\
-        ss.beta.logpdf(2*theta/np.pi,20,40)
+        ss.beta.logpdf(2*theta/np.pi,2,4)
     if np.isnan(lp):
         pdb.set_trace()
     return lp

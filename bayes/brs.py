@@ -635,7 +635,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                                                                                          np.tan(np.median(sampler.flatchain[:,0]))))
                 badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
                 splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.32',badprob=badprob)
-                summarize2d(t,sampler21=sampler)
+                summarize2d(t,sampler32=sampler)
                 t.write('brs_category.'+keyname+'.txt',format='ascii')
             it.iternext()
         iter2.iternext()
