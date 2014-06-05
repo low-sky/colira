@@ -143,14 +143,14 @@ def summarize2d(t,sampler21=None,sampler32=None):
     if sampler21 is not None:
         r21 = np.tan(sampler21.flatchain[:,0])
         t['R21'][-1] = np.median(r21)
-        t['R21+'][-1] = scipy.stats.scoreatpercentile(r21,85)
-        t['R21-'][-1] = scipy.stats.scoreatpercentile(r21,15)
+        t['R21+'][-1] = scipy.stats.scoreatpercentile(r21,85)-t['R21'][-1]
+        t['R21-'][-1] = t['R21'][-1]-scipy.stats.scoreatpercentile(r21,15)
 
     if sampler32 is not None:
         r32 = np.tan(sampler32.flatchain[:,0])
         t['R32'][-1] = np.median(r32)
-        t['R32+'][-1] = scipy.stats.scoreatpercentile(r32,85)
-        t['R32-'][-1] = scipy.stats.scoreatpercentile(r32,15)
+        t['R32+'][-1] = scipy.stats.scoreatpercentile(r32,85)-t['R32'][-1]
+        t['R32-'][-1] = t['R32']-scipy.stats.scoreatpercentile(r32,15)
         
 def table_template():
     t = Table(names=('Name','theta','theta+','theta-','phi','phi+','phi-',\

@@ -1,4 +1,3 @@
-
 from astropy.table import Table
 import matplotlib.pyplot as p
 import numpy as np
