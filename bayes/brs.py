@@ -150,7 +150,7 @@ def summarize2d(t,sampler21=None,sampler32=None):
         r32 = np.tan(sampler32.flatchain[:,0])
         t['R32'][-1] = np.median(r32)
         t['R32+'][-1] = scipy.stats.scoreatpercentile(r32,85)-t['R32'][-1]
-        t['R32-'][-1] = t['R32']-scipy.stats.scoreatpercentile(r32,15)
+        t['R32-'][-1] = t['R32'][-1]-scipy.stats.scoreatpercentile(r32,15)
         
 def table_template():
     t = Table(names=('Name','theta','theta+','theta-','phi','phi+','phi-',\
@@ -593,13 +593,14 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 y_err = sub21['CO21_ERR']
                 data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
 
-                ndim, nwalkers = 5,50
+                ndim, nwalkers = 6,50
                 p0 = np.zeros((nwalkers,ndim))
                 p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
                 p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
                 p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
                 p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+                p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
                 sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
                                             args=[x,y,x_err,y_err])
@@ -609,6 +610,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
                                                                                          np.tan(np.median(sampler.flatchain[:,0]))))
                 badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
+#                pdb.set_trace()
                 splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.21',badprob=badprob)
                 summarize2d(t,sampler21=sampler)
 
@@ -618,13 +620,14 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 y = sub32['CO32']
                 y_err = sub32['CO32_ERR']
                 data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
-                ndim, nwalkers = 5,50
+                ndim, nwalkers = 6,50
                 p0 = np.zeros((nwalkers,ndim))
                 p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
                 p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
                 p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
                 p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+                p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
                 sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
                                             args=[x,y,x_err,y_err])
@@ -639,3 +642,90 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                 t.write('brs_category.'+keyname+'.txt',format='ascii')
             it.iternext()
         iter2.iternext()
+
+def alldata2d(fitsfile):
+    s = fits.getdata(fitsfile)
+    hdr = fits.getheader(fitsfile)
+    GalNames = np.unique(s['GALNAME'])
+    
+    cut = -10
+    spire_cut=10
+    nValid = 3
+    t = table_template()
+    for tag in t.keys():
+        if tag != 'Name':
+            t[tag].format = '{:.3f}'
+    t.add_row()
+
+    idx21 = np.where((s['CO10']>cut*s['CO10_ERR'])&
+                     (s['CO21']>cut*s['CO21_ERR'])&
+                     (s['SPIRE2']> spire_cut))
+    sub21 = s[idx21]
+
+    idx32 = np.where((s['CO32']>cut*s['CO32_ERR'])&
+                     (s['CO21']>cut*s['CO21_ERR'])&
+                     (s['SPIRE2']>spire_cut))
+    sub32 = s[idx32]
+
+    idx31 = np.where((s['CO32']>cut*s['CO32_ERR'])&
+                     (s['CO10']>cut*s['CO10_ERR'])&
+                     (s['SPIRE2']>spire_cut))
+    sub31 = s[idx31]
+
+    print('Number of r21 points: {0}. Number of r32 points: {1}'.format(len(sub21),len(sub32)))
+    keyname = 'ALLDATA'
+    name = ''
+    if len(sub21)>nValid:
+        x = sub21['CO10']
+        x_err = sub21['CO10_ERR']
+        y = sub21['CO21']
+        y_err = sub21['CO21_ERR']
+        data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
+
+        ndim, nwalkers = 6,50
+        p0 = np.zeros((nwalkers,ndim))
+        p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+        p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
+        p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
+        p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
+        p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+        p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
+                                    args=[x,y,x_err,y_err])
+        pos, prob, state = sampler.run_mcmc(p0, 400)
+        sampler.reset()
+        sampler.run_mcmc(pos,1000)
+        print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
+                                                                                 np.tan(np.median(sampler.flatchain[:,0]))))
+        badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
+#        pdb.set_trace()
+        splt.sampler_plot2d_mixture(sampler,data,name='alldata.21',badprob=badprob)
+        summarize2d(t,sampler21=sampler)
+
+    if len(sub32)>nValid:
+        x = sub32['CO21']
+        x_err = sub32['CO21_ERR']
+        y = sub32['CO32']
+        y_err = sub32['CO32_ERR']
+        data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
+        ndim, nwalkers = 6,50
+        p0 = np.zeros((nwalkers,ndim))
+        p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+        p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
+        p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
+        p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
+        p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+        p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
+                                    args=[x,y,x_err,y_err])
+        pos, prob, state = sampler.run_mcmc(p0, 400)
+        sampler.reset()
+        sampler.run_mcmc(pos,1000)
+        print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
+                                                                                 np.tan(np.median(sampler.flatchain[:,0]))))
+        badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
+        splt.sampler_plot2d_mixture(sampler,data,name='addata.32',badprob=badprob)
+        summarize2d(t,sampler32=sampler)
+        t.write('alldata.txt',format='ascii')
