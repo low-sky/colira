@@ -69,13 +69,24 @@ def logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
     return pbad
 
 def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
-    if sampler.flatchain.shape[1]==6:
-        theta,xoff,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
+    if sampler.flatchain.shape[1]==7:
+        theta,xoff,scatter,badfrac,xbad,ybad,badsig = sampler.flatchain[:,0],\
                                                   sampler.flatchain[:,1],\
                                                   sampler.flatchain[:,2],\
                                                   sampler.flatchain[:,3],\
                                                   sampler.flatchain[:,4],\
-                                                  sampler.flatchain[:,5]
+                                                  sampler.flatchain[:,5],\
+                                                  sampler.flatchain[:,6]
+
+    if sampler.flatchain.shape[1]==6:
+        theta,scatter,badfrac,xbad,ybad,badsig = \
+            sampler.flatchain[:,0],\
+            sampler.flatchain[:,1],\
+            sampler.flatchain[:,2],\
+            sampler.flatchain[:,3],\
+            sampler.flatchain[:,4],\
+            sampler.flatchain[:,5]
+        xoff=0
     if sampler.flatchain.shape[1] == 5:
         theta,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
                                              sampler.flatchain[:,1],\
@@ -89,7 +100,7 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
         Sigma = (np.sin(theta))**2*(x_err[idx]**2+scatter**2)+\
             (np.cos(theta))**2*(y_err[idx]**2+scatter**2)
         goodlp = -0.5*(Delta/Sigma)
-        BadDelta = (y[idx]-badmn*np.cos(theta))**2+(x[idx]-badmn*np.sin(theta))**2
+        BadDelta = (y[idx]-ybad)**2+(x[idx]-xbad)**2
         badlp =-0.5*(BadDelta/(Sigma+badsig**2))
 # run percentiles over chains!
         pbad[idx] = np.percentile(np.exp(badlp)/(np.exp(badlp)+np.exp(goodlp)),50)
@@ -165,7 +176,7 @@ def table_template():
                           'f8','f8','f8','f8','f8','f8'))
     return t
 
-def bygal(fitsfile,spire_cut=10.0):
+def bygal(fitsfile,spire_cut=3.0):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
@@ -251,7 +262,7 @@ def bygal(fitsfile,spire_cut=10.0):
 def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE','RGAL'],
-                                  spire_cut=10.0):
+                                  spire_cut=3.0):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
@@ -278,15 +289,19 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                   (s['SPIRE1']> spire_cut))
     sub = s[SignifData]
 
+    
+    
+
     Signif21 = ((s['CO10']>cut*s['CO10_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 (s['INTERF']==0)&\
-                (s['SPIRE1']> spire_cut))
-    sub21 = s[Signif21]
+                ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
 
     Signif32 = ((s['CO32']>cut*s['CO32_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
-                (s['INTERF']==0))
+                ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
+    
+    sub21 = s[Signif21]
     sub32 = s[Signif32]
     
     molrat = 313*s['CO21']/s['HI']
@@ -399,7 +414,7 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     iter2.iternext()
 
 
-def bygal2d(fitsfile,spire_cut=10.0):
+def bygal2d(fitsfile,spire_cut=3.0):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
@@ -423,13 +438,15 @@ def bygal2d(fitsfile,spire_cut=10.0):
         idx21 = np.where((s['GALNAME']==name)&
                          (s['CO10']>cut*s['CO10_ERR'])&
                          (s['CO21']>cut*s['CO21_ERR'])&
-                         (s['SPIRE1']> spire_cut))
+                          ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
+
         sub21 = s[idx21]
 
         idx32 = np.where((s['GALNAME']==name)&
                          (s['CO32']>cut*s['CO32_ERR'])&
                          (s['CO21']>cut*s['CO21_ERR'])&
-                         (s['SPIRE1']>spire_cut))
+                         ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
+
 
         sub32 = s[idx32]
 
@@ -442,15 +459,15 @@ def bygal2d(fitsfile,spire_cut=10.0):
 
             t['Npts'][-1]=x.size
             data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
-
-            ndim, nwalkers = 6,50
+            ndim, nwalkers = 7,50
             p0 = np.zeros((nwalkers,ndim))
             p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
-            p0[:,1] = (np.random.randn(nwalkers))*np.median(x_err) # xoffset
+            p0[:,1] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
             p0[:,2] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
             p0[:,3] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
             p0[:,4] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-            p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+            p0[:,5] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+            p0[:,6] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
             
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_xoff_scatter_mixture,
                                         args=[x,y,x_err,y_err])
@@ -471,13 +488,14 @@ def bygal2d(fitsfile,spire_cut=10.0):
             t['Npts'][-1]=x.size
             data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
 
-            ndim, nwalkers = 5,50
+            ndim, nwalkers = 6,50
             p0 = np.zeros((nwalkers,ndim))
             p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
             p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
             p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
             p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-            p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+            p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
+            p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
                                         args=[x,y,x_err,y_err])
@@ -495,7 +513,7 @@ def bygal2d(fitsfile,spire_cut=10.0):
 def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE'],
-                                  spire_cut=10.0):
+                                  spire_cut=3.0):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
@@ -519,11 +537,12 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     Signif21 = ((s['CO10']>cut*s['CO10_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 (s['INTERF']==0)&\
-                (s['SPIRE1']> spire_cut))
+                ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
 
     Signif32 = ((s['CO32']>cut*s['CO32_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
-                (s['SPIRE1']> spire_cut))
+                ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
+
     
     molrat = 313*s['CO21']/s['HI']
     sfr = 634*s['HA']+0.00325*s['MIPS24']
@@ -649,7 +668,7 @@ def alldata2d(fitsfile):
     GalNames = np.unique(s['GALNAME'])
     
     cut = -10
-    spire_cut=10
+    spire_cut=3
     nValid = 3
     t = table_template()
     for tag in t.keys():
@@ -659,17 +678,17 @@ def alldata2d(fitsfile):
 
     idx21 = np.where((s['CO10']>cut*s['CO10_ERR'])&
                      (s['CO21']>cut*s['CO21_ERR'])&
-                     (s['SPIRE2']> spire_cut))
+                     (s['SPIRE1']> spire_cut))
     sub21 = s[idx21]
 
     idx32 = np.where((s['CO32']>cut*s['CO32_ERR'])&
                      (s['CO21']>cut*s['CO21_ERR'])&
-                     (s['SPIRE2']>spire_cut))
+                     (s['SPIRE1']>spire_cut))
     sub32 = s[idx32]
 
     idx31 = np.where((s['CO32']>cut*s['CO32_ERR'])&
                      (s['CO10']>cut*s['CO10_ERR'])&
-                     (s['SPIRE2']>spire_cut))
+                     (s['SPIRE1']>spire_cut))
     sub31 = s[idx31]
 
     print('Number of r21 points: {0}. Number of r32 points: {1}'.format(len(sub21),len(sub32)))

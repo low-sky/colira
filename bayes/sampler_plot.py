@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     x = data['x']
     y = data['y']
@@ -68,7 +69,7 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
 
     if xoff==None:
         if UseXoff:
-            xoff = np.median(sampler.flatchain[:,3])
+            xoff = np.median(sampler.flatchain[:,1])
         else:
             xoff = 0
 
@@ -76,7 +77,7 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
     for line in np.arange(nLines):
         index = int(np.random.rand(1)*sshape[0])
         if UseXoff:
-            xoff = sampler.flatchain[index,3]
+            xoff = sampler.flatchain[index,1]
         else:
             xoff=0
         plt.plot(testx,np.tan(sampler.flatchain[index,0])*(testx+xoff),
@@ -164,7 +165,7 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     p.clf()
 
 
-def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None):
+def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None,nLines = 10):
     x = data['x']
     y = data['y']
     x_err = data['x_err']
@@ -179,12 +180,25 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
     plt.ylabel('CO(upper)')
 
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
-    if sampler.flatchain.shape[1] == 6:
+    if sampler.flatchain.shape[1] == 7:
         xoff = np.median(sampler.flatchain[:,1])
+        UseXoff = True
     else:
         xoff = 0
+        UseXoff = False
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
 #    p.tight_layout()
+
+    for line in np.arange(nLines):
+        index = int(np.random.rand(1)*sampler.flatchain.shape[0])
+        if UseXoff:
+            xoff = sampler.flatchain[index,1]
+        else:
+            xoff=0
+        plt.plot(testx,np.tan(sampler.flatchain[index,0])*(testx+xoff),
+            alpha=0.3,color='gray')
+
+
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
     plt.close()
