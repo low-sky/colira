@@ -181,7 +181,7 @@ def bygal(fitsfile,spire_cut=3.0):
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
     
-    cut = -10
+    cut = -4
 
     t = table_template()
     for tag in t.keys():
@@ -268,7 +268,7 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
 
-    cut = -10
+    cut = -4
     quantile = 10
     nValid = 1
 
@@ -419,7 +419,7 @@ def bygal2d(fitsfile,spire_cut=3.0):
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
     
-    cut = -10
+    cut = -4
 
     t = table_template()
     for tag in t.keys():
@@ -519,7 +519,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
 
-    cut = -10
+    cut = -4
     quantile = 10
     nValid = 1
 
@@ -667,7 +667,7 @@ def alldata2d(fitsfile):
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
     
-    cut = -10
+    cut = -4
     spire_cut=3
     nValid = 3
     t = table_template()

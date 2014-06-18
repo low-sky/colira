@@ -215,10 +215,10 @@ def multipanel():
                'STELLARSD']
     catlabel = [r'$R_{\mathrm{gal}}$ (kpc)',
                 r'$R_{\mathrm{gal}}/R_{25}$',\
-                r'$I(70\,\mu\mathrm{m})$',\
-                r'$I(24\,\mu\mathrm{m})/I(170\,\mu\mathrm{m}$)',\
-                r'$I$(FUV)',
-                r'$I$(FUV)/$I$(NUV)',\
+                r'$I_{250}$ (MJy sr$^{-1}$)',\
+                r'$I_{24}/I_{160}$',\
+                r'$I_{\mathrm{FUV}}$ (???)',
+                r'$I_{\mathrm{FUV}/I_{\mathrm{NUV}}$',\
                 r'$\Sigma_{\mathrm{SFR}}$ ($M_{\odot}$ yr$^{-1}$ kpc$^{-2}$)',\
                 r'$\Sigma_{\mathrm{H2}}/\Sigma_{\mathrm{HI}}$',
                 r'$\Sigma_{\star}$ ($M_{\odot}$ kpc$^{-2}$ yr$^{-1}$)']
@@ -228,10 +228,10 @@ def multipanel():
     fig = p.figure(1,figsize=(7.5,7.5))
     for ii,tag in enumerate(catlist):
         t = Table.read('brs_category.'+tag+'.txt',format='ascii')
-        t['R21+'] = t['R21+']-t['R21']
-        t['R21-'] = t['R21']-t['R21-']
-        t['R32+'] = t['R32+']-t['R32']
-        t['R32-'] = t['R32']-t['R32-']
+#         t['R21+'] = t['R21+']-t['R21']
+#         t['R21-'] = t['R21']-t['R21-']
+#         t['R32+'] = t['R32+']-t['R32']
+#         t['R32-'] = t['R32']-t['R32-']
         ax = p.subplot(3,3,ii+1)
         ax.set_xscale(catax[ii])
         ax.set_ylim(0.0,1.0)
