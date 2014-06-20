@@ -217,8 +217,8 @@ def multipanel():
                 r'$R_{\mathrm{gal}}/R_{25}$',\
                 r'$I_{250}$ (MJy sr$^{-1}$)',\
                 r'$I_{24}/I_{160}$',\
-                r'$I_{\mathrm{FUV}}$ (???)',
-                r'$I_{\mathrm{FUV}/I_{\mathrm{NUV}}$',\
+                r'$I_{\mathrm{FUV}}$ (mJy)',
+                r'$I_{\mathrm{FUV}}/I_{\mathrm{NUV}}$',\
                 r'$\Sigma_{\mathrm{SFR}}$ ($M_{\odot}$ yr$^{-1}$ kpc$^{-2}$)',\
                 r'$\Sigma_{\mathrm{H2}}/\Sigma_{\mathrm{HI}}$',
                 r'$\Sigma_{\star}$ ($M_{\odot}$ kpc$^{-2}$ yr$^{-1}$)']
