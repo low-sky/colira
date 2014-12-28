@@ -536,11 +536,20 @@ def bygal2d(fitsfile,spire_cut=3.0):
 def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE'],
-                                  spire_cut=3.0):
+                                  spire_cut=3.0,withMPI = False):):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
+
+    if withMPI:
+        pool = MPIPool()
+        if not pool.is_master():
+            pool.wait()
+            sys.exit(0)
+        else:
+            pool = None
+
 
     cut = -2
     quantile = 10
@@ -659,7 +668,7 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
                 sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
-                                            args=[x,y,x_err,y_err])
+                                            args=[x,y,x_err,y_err],pool=pool)
                 pos, prob, state = sampler.run_mcmc(p0, 400)
                 sampler.reset()
                 sampler.run_mcmc(pos,1000)
