@@ -422,7 +422,6 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 badprob = logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
                 splt.sampler_plot_mixture(sampler,data,name=name,badprob=badprob)
                 summarize(t,sampler)
-
             it.iternext()
         t.write('brs_category.'+keyname+'.txt',format='ascii')
         t2 = Table(t,copy=True)
@@ -434,7 +433,7 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
         col = Column(name='blank2',data=emptystring)
         t2.add_column(col,index=8)
         t2.write('brs_category.'+keyname+'.tex',format='latex')
-    iter2.iternext()
+        iter2.iternext()
 
 
 def bygal2d(fitsfile,spire_cut=3.0):
