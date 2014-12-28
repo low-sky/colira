@@ -211,7 +211,7 @@ def spire1():
 
 def multipanel():
     rc('font',size=9)
-    catlist = ['RGAL','RGALNORM','SPIRE1','IRCOLOR','FUV','UVCOLOR','SFR','MOLRAT',
+    catlist = ['RGAL','RGALNORM','SPIRE1','IRCOLOR','FUV','UVCOLOR','SFR','PRESSURE',
                'STELLARSD']
     catlabel = [r'$R_{\mathrm{gal}}$ (kpc)',
                 r'$R_{\mathrm{gal}}/R_{25}$',\
@@ -238,11 +238,11 @@ def multipanel():
         ax.set_xlabel(catlabel[ii])
         if (ii % 3) == 0:
             ax.set_ylabel(r'Line Ratio')
-        p.errorbar(1e1**t['MedKey']/catfac[ii],
+        p.errorbar(1e1**t['MedKey32']/catfac[ii],
                    t['R32'],yerr=[t['R32-'],t['R32+']],\
                    marker='^',color='black',ecolor='gray',label='$R_{32}$')
 
-        p.errorbar(1e1**t['MedKey']/catfac[ii],
+        p.errorbar(1e1**t['MedKey21']/catfac[ii],
                    t['R21'],yerr=[t['R21-'],t['R21+']],\
                    marker='o',color='black',ecolor='gray',label='$R_{21}$')
 #

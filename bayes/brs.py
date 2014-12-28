@@ -169,10 +169,14 @@ def table_template():
                      'xR21-','xR21','xR21+','xR32-','xR32','xR32+',
                      'var32','var21',
                      'R31-','R31','R31+','var','xoff','LowKey',\
-                     'HighKey','MedKey','Npts','Npts21','Npts32'),\
-              dtypes=('S7','f8','f8','f8','f8','f8','f8','f8','f8','f8',\
+                     'HighKey','MedKey',\
+                     'LowKey21','MedKey21','HighKey21',\
+                     'LowKey32','MedKey32','HighKey32',\
+                     'Npts','Npts21','Npts32'),\
+              dtype=('S7','f8','f8','f8','f8','f8','f8','f8','f8','f8',\
                           'f8','f8','f8','f8','f8','f8','f8','f8',\
                           'f8','f8','f8','f8','f8','f8','f8','f8',\
+                          'f8','f8','f8','f8','f8','f8',\
                           'f8','f8','f8','f8','f8','f8'))
     return t
 
@@ -181,7 +185,7 @@ def bygal(fitsfile,spire_cut=3.0):
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
     
-    cut = -4
+    cut = -2
 
     t = table_template()
     for tag in t.keys():
@@ -259,7 +263,7 @@ def bygal(fitsfile,spire_cut=3.0):
             t.write('brs.bygal.txt',format='ascii')
         it.iternext()
 
-def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
+def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE','RGAL'],
                                   spire_cut=3.0):
@@ -268,7 +272,7 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
 
-    cut = -4
+    cut = -2
     quantile = 10
     nValid = 1
 
@@ -310,6 +314,7 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     stellarsd = 200*s['IRAC1']
     pressure = 272*(s['HI']*0.02+s['CO21']*6.7)*\
                np.sqrt(stellarsd)*8/np.sqrt(212)
+    tdep = 6.7*s['CO21']/sfr*1e6
 
 
     iter2 = np.nditer(category)
@@ -326,6 +331,8 @@ def bycategory(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
             key_variable = molrat
         elif keyname == 'PRESSURE':
             key_variable = pressure
+        elif keyname == 'TDEP':
+            key_variable = tdep
         elif keyname == 'RGALNORM':
             key_variable = s['RGALNORM']
         elif keyname == 'RGAL':
@@ -419,7 +426,7 @@ def bygal2d(fitsfile,spire_cut=3.0):
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
     
-    cut = -4
+    cut = -2
 
     t = table_template()
     for tag in t.keys():
@@ -510,7 +517,7 @@ def bygal2d(fitsfile,spire_cut=3.0):
             t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
 
-def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
+def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE'],
                                   spire_cut=3.0):
@@ -519,7 +526,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
 
-    cut = -4
+    cut = -2
     quantile = 10
     nValid = 1
 
@@ -550,7 +557,7 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
     stellarsd = 200*s['IRAC1']
     pressure = 272*(s['HI']*0.02+s['CO21']*6.7)*\
                np.sqrt(stellarsd)*8/np.sqrt(212)
-
+    tdep = 6.7*s['CO21']/sfr*1e6
 
     iter2 = np.nditer(category)
 
@@ -564,6 +571,8 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
             key_variable = stellarsd
         elif keyname == 'MOLRAT':
             key_variable = molrat
+        elif keyname == 'TDEP':
+            key_variable = tdep
         elif keyname == 'PRESSURE':
             key_variable = pressure
         elif keyname == 'RGALNORM':
@@ -578,7 +587,8 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
             key_variable = (s['SPIRE1'])
 
         it = np.nditer(lower_percentiles,flags=['f_index'])
-        keyscores = key_variable[np.isfinite(key_variable)&(Signif21|Signif32)]
+        keyscores21 = key_variable[np.isfinite(key_variable)&(Signif21)]
+        keyscores32 = key_variable[np.isfinite(key_variable)&(Signif32)]
         t=table_template()
         while not it.finished:
             pct = it.index
@@ -586,21 +596,32 @@ def bycategory2d(fitsfile,category=['RGAL','SPIRE1','RGALNORM','FUV',
             t.add_row()
             t['Name'][pct] = name.upper()
 
-            lower_score =scipy.stats.scoreatpercentile(keyscores,\
+            lower_score21 =scipy.stats.scoreatpercentile(keyscores21,\
                                                            lower_percentiles[pct])
-            upper_score =scipy.stats.scoreatpercentile(keyscores,\
+            upper_score21 =scipy.stats.scoreatpercentile(keyscores21,\
                                                            upper_percentiles[pct])
 
-            t['LowKey'][pct] = np.log10(lower_score)
-            t['HighKey'][pct] = np.log10(upper_score)
-            print('Key: {0}. Lower: {1}  Upper: {2}'.format(keyname,lower_score,upper_score))
-            t['MedKey'][pct] =np.log10(np.median(keyscores[(keyscores>=lower_score)&
-                                                           (keyscores<=upper_score)]))
+            lower_score32 =scipy.stats.scoreatpercentile(keyscores32,\
+                                                           lower_percentiles[pct])
+            upper_score32 =scipy.stats.scoreatpercentile(keyscores32,\
+                                                           upper_percentiles[pct])
 
-            idx21 = np.where((key_variable>=lower_score)&
-                           (key_variable<=upper_score)&(Signif21))
-            idx32 = np.where((key_variable>=lower_score)&
-                           (key_variable<=upper_score)&(Signif32))
+            t['LowKey21'][pct] = np.log10(lower_score21)
+            t['HighKey21'][pct] = np.log10(upper_score21)
+            print('Key: {0}. Lower: {1}  Upper: {2}'.format(keyname,lower_score21,upper_score21))
+            t['MedKey21'][pct] =np.log10(np.median(keyscores21[(keyscores21>=lower_score21)&
+                                                           (keyscores21<=upper_score21)]))
+
+            t['LowKey32'][pct] = np.log10(lower_score32)
+            t['HighKey32'][pct] = np.log10(upper_score32)
+            print('Key: {0}. Lower: {1}  Upper: {2}'.format(keyname,lower_score32,upper_score32))
+            t['MedKey32'][pct] =np.log10(np.median(keyscores32[(keyscores32>=lower_score32)&
+                                                           (keyscores32<=upper_score32)]))
+
+            idx21 = np.where((key_variable>=lower_score21)&
+                           (key_variable<=upper_score21)&(Signif21))
+            idx32 = np.where((key_variable>=lower_score32)&
+                            (key_variable<=upper_score32)&(Signif32))
 
             sub21 = s[idx21]
             sub32 = s[idx32]

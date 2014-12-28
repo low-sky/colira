@@ -161,8 +161,8 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     plt.tight_layout()
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
-    p.close()
-    p.clf()
+    plt.close()
+    plt.clf()
 
 
 def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None,nLines = 10):
