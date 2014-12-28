@@ -11,7 +11,7 @@ import pdb
 rc('text',usetex=True)
 try:
     import mpi4py
-    import emcee.utils import MPIPool
+    from emcee.utils import MPIPool
     haveMPI = True
 except:
     haveMPI = False
