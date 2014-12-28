@@ -9,6 +9,14 @@ from matplotlib import rc
 from astropy.table import Table, Column
 import pdb
 rc('text',usetex=True)
+try:
+    import mpi4py
+    import emcee.utils import MPIPool
+    haveMPI = True
+except:
+    haveMPI = False
+    pass
+
 
 def logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
     theta,phi,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
@@ -266,7 +274,15 @@ def bygal(fitsfile,spire_cut=3.0):
 def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE','RGAL'],
-                                  spire_cut=3.0):
+                                  spire_cut=3.0, withMPI = False):
+    if withMPI:
+        pool = MPIPool()
+        if not pool.is_master():
+            pool.wait()
+            sys.exit(0)
+        else:
+            pool = None
+
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
@@ -396,7 +412,7 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
                 sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_scatter_mixture,
-                                            args=[x,y,z,x_err,y_err,z_err])
+                                            args=[x,y,z,x_err,y_err,z_err], pool = pool)
 
                 pos, prob, state = sampler.run_mcmc(p0, 400)
                 sampler.reset()
