@@ -535,7 +535,7 @@ def bygal2d(fitsfile,spire_cut=3.0):
 def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
                                   'STELLARSD','MOLRAT','PRESSURE'],
-                                  spire_cut=3.0,withMPI = False):):
+                                  spire_cut=3.0,withMPI = False):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
