@@ -8,6 +8,7 @@ import matplotlib.pyplot as p
 from matplotlib import rc
 from astropy.table import Table, Column
 import pdb
+import sys
 rc('text',usetex=True)
 try:
     import mpi4py
@@ -77,33 +78,27 @@ def logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
     return pbad
 
 def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
-    if sampler.flatchain.shape[1]==7:
-        theta,xoff,scatter,badfrac,xbad,ybad,badsig = sampler.flatchain[:,0],\
+    if sampler.flatchain.shape[1]==6:
+        theta,xoff,scatter,badfrac,badmn,badsig = sampler.flatchain[:,0],\
                                                   sampler.flatchain[:,1],\
                                                   sampler.flatchain[:,2],\
                                                   sampler.flatchain[:,3],\
                                                   sampler.flatchain[:,4],\
-                                                  sampler.flatchain[:,5],\
-                                                  sampler.flatchain[:,6]
+                                                  sampler.flatchain[:,5]
+                                        
 
-    if sampler.flatchain.shape[1]==6:
-        theta,scatter,badfrac,xbad,ybad,badsig = \
+    if sampler.flatchain.shape[1]==5:
+        theta,scatter,badfrac,badmn,badsig = \
             sampler.flatchain[:,0],\
             sampler.flatchain[:,1],\
             sampler.flatchain[:,2],\
             sampler.flatchain[:,3],\
-            sampler.flatchain[:,4],\
-            sampler.flatchain[:,5]
-        xoff=0
-    if sampler.flatchain.shape[1] == 5:
-        theta,scatter,badfrac,badsig,badmn = sampler.flatchain[:,0],\
-                                             sampler.flatchain[:,1],\
-                                             sampler.flatchain[:,2],\
-                                             sampler.flatchain[:,3],\
-                                             sampler.flatchain[:,4]
+            sampler.flatchain[:,4]
         xoff=0
     pbad = np.zeros(x.size)
     for idx,value in enumerate(x):
+        xbad = np.cos(theta)*badmn
+        ybad = np.sin(theta)*badmn
         Delta = (np.cos(theta)*y[idx] - np.sin(theta)*(x[idx]+xoff))**2
         Sigma = (np.sin(theta))**2*(x_err[idx]**2+scatter**2)+\
             (np.cos(theta))**2*(y_err[idx]**2+scatter**2)
@@ -153,7 +148,7 @@ def summarize(t,sampler):
             sampler.flatchain[:,3]**2+
             sampler.flatchain[:,4]**2)
 
-def summarize2d(t,sampler21=None,sampler32=None):
+def summarize2d(t,sampler21=None,sampler32=None, sampler31 = None):
     """
     Summarizes a sampler behavior into the output table
 
@@ -170,6 +165,12 @@ def summarize2d(t,sampler21=None,sampler32=None):
         t['R32'][-1] = np.median(r32)
         t['R32+'][-1] = scipy.stats.scoreatpercentile(r32,85)-t['R32'][-1]
         t['R32-'][-1] = t['R32'][-1]-scipy.stats.scoreatpercentile(r32,15)
+
+    if sampler31 is not None:
+        r31 = np.tan(sampler31.flatchain[:,0])
+        t['R31'][-1] = np.median(r31)
+        t['R31+'][-1] = scipy.stats.scoreatpercentile(r31,85)-t['R31'][-1]
+        t['R31-'][-1] = t['R31'][-1]-scipy.stats.scoreatpercentile(r31,15)
         
 def table_template():
     t = Table(names=('Name','theta','theta+','theta-','phi','phi+','phi-',\
@@ -180,12 +181,14 @@ def table_template():
                      'HighKey','MedKey',\
                      'LowKey21','MedKey21','HighKey21',\
                      'LowKey32','MedKey32','HighKey32',\
+                     'LowKey31','MedKey31','HighKey31',\
                      'Npts','Npts21','Npts32'),\
               dtype=('S7','f8','f8','f8','f8','f8','f8','f8','f8','f8',\
-                          'f8','f8','f8','f8','f8','f8','f8','f8',\
-                          'f8','f8','f8','f8','f8','f8','f8','f8',\
-                          'f8','f8','f8','f8','f8','f8',\
-                          'f8','f8','f8','f8','f8','f8'))
+                     'f8','f8','f8','f8','f8','f8','f8','f8',\
+                     'f8','f8','f8','f8','f8','f8','f8','f8',\
+                     'f8','f8','f8','f8','f8','f8',\
+                     'f8','f8','f8',\
+                     'f8','f8','f8','f8','f8','f8'))
     return t
 
 def bygal(fitsfile,spire_cut=3.0):
@@ -273,10 +276,10 @@ def bygal(fitsfile,spire_cut=3.0):
 
 def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                                   'UVCOLOR','SFR','IRCOLOR',
-                                  'STELLARSD','MOLRAT','PRESSURE','RGAL'],
+                                  'STELLARSD','MOLRAT','PRESSURE'],
                                   spire_cut=3.0, withMPI = False):
     if withMPI:
-        pool = MPIPool()
+        pool = MPIPool(loadbalance=True)
         if not pool.is_master():
             pool.wait()
             sys.exit(0)
@@ -330,7 +333,7 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
     stellarsd = 200*s['IRAC1']
     pressure = 272*(s['HI']*0.02+s['CO21']*6.7)*\
                np.sqrt(stellarsd)*8/np.sqrt(212)
-    tdep = 6.7*s['CO21']/sfr*1e6
+    tdep = (6.7*s['CO21']+s['HI']*0.02)/sfr*1e6
 
 
     iter2 = np.nditer(category)
@@ -411,12 +414,17 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 p0[:,4] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
-                sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_scatter_mixture,
-                                            args=[x,y,z,x_err,y_err,z_err], pool = pool)
+                if withMPI:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_scatter_mixture,
+                                                    args=[x,y,z,x_err,y_err,z_err], pool = pool)
+                else:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_scatter_mixture,
+                                                    args=[x,y,z,x_err,y_err,z_err])
 
                 pos, prob, state = sampler.run_mcmc(p0, 400)
                 sampler.reset()
                 sampler.run_mcmc(pos,1000)
+#                pdb.set_trace()
                 print(name,np.mean(sampler.acceptance_fraction),
                       1/np.tan(np.median(sampler.flatchain[:,0])))
                 badprob = logprob3d_checkbaddata(sampler,x,y,z,x_err,y_err,z_err)
@@ -532,22 +540,20 @@ def bygal2d(fitsfile,spire_cut=3.0):
             t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
 
-def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
-                                  'UVCOLOR','SFR','IRCOLOR',
-                                  'STELLARSD','MOLRAT','PRESSURE'],
-                                  spire_cut=3.0,withMPI = False):
+def bycategory2d(fitsfile,category=['SPIRE1','RGALNORM','FUV',
+                                    'UVCOLOR','IRCOLOR',
+                                    'STELLARSD','PRESSURE','TDEP','MOLRAT','SFR','RGAL'],
+                 spire_cut=3.0,withMPI = False,threads=1):
     category = np.array(category)
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
 
     if withMPI:
-        pool = MPIPool()
+        pool = MPIPool(loadbalance=True)
         if not pool.is_master():
             pool.wait()
             sys.exit(0)
-        else:
-            pool = None
 
 
     cut = -2
@@ -570,6 +576,11 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 (s['INTERF']==0)&\
                 ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
 
+    Signif31 = ((s['CO10']>cut*s['CO10_ERR'])&\
+                (s['CO32']>cut*s['CO32_ERR'])&\
+                (s['INTERF']==0)&\
+                ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
+
     Signif32 = ((s['CO32']>cut*s['CO32_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
@@ -581,7 +592,7 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
     stellarsd = 200*s['IRAC1']
     pressure = 272*(s['HI']*0.02+s['CO21']*6.7)*\
                np.sqrt(stellarsd)*8/np.sqrt(212)
-    tdep = 6.7*s['CO21']/sfr*1e6
+    tdep = (6.7*s['CO21']+0.02*s['HI'])/sfr*1e6
 
     iter2 = np.nditer(category)
 
@@ -613,6 +624,8 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
         it = np.nditer(lower_percentiles,flags=['f_index'])
         keyscores21 = key_variable[np.isfinite(key_variable)&(Signif21)]
         keyscores32 = key_variable[np.isfinite(key_variable)&(Signif32)]
+        keyscores31 = key_variable[np.isfinite(key_variable)&(Signif31)]
+
         t=table_template()
         while not it.finished:
             pct = it.index
@@ -630,6 +643,12 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
             upper_score32 =scipy.stats.scoreatpercentile(keyscores32,\
                                                            upper_percentiles[pct])
 
+            lower_score31 =scipy.stats.scoreatpercentile(keyscores31,\
+                                                           lower_percentiles[pct])
+            upper_score31 =scipy.stats.scoreatpercentile(keyscores31,\
+                                                           upper_percentiles[pct])
+
+
             t['LowKey21'][pct] = np.log10(lower_score21)
             t['HighKey21'][pct] = np.log10(upper_score21)
             print('Key: {0}. Lower: {1}  Upper: {2}'.format(keyname,lower_score21,upper_score21))
@@ -642,14 +661,24 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
             t['MedKey32'][pct] =np.log10(np.median(keyscores32[(keyscores32>=lower_score32)&
                                                            (keyscores32<=upper_score32)]))
 
+            t['LowKey31'][pct] = np.log10(lower_score31)
+            t['HighKey31'][pct] = np.log10(upper_score31)
+            print('Key: {0}. Lower: {1}  Upper: {2}'.format(keyname,lower_score31,upper_score31))
+            t['MedKey31'][pct] =np.log10(np.median(keyscores31[(keyscores31>=lower_score31)&
+                                                           (keyscores31<=upper_score31)]))
+
+
             idx21 = np.where((key_variable>=lower_score21)&
                            (key_variable<=upper_score21)&(Signif21))
             idx32 = np.where((key_variable>=lower_score32)&
                             (key_variable<=upper_score32)&(Signif32))
+            idx31 = np.where((key_variable>=lower_score31)&
+                             (key_variable<=upper_score31)&(Signif31))
 
+            sub31 = s[idx31]
             sub21 = s[idx21]
             sub32 = s[idx32]
-            print('Number of r21 points: {0}. Number of r32 points: {1}'.format(len(sub21),len(sub32)))
+            print('Number of r21 points: {0}. Number of r32 points: {1}. Number of r31 points: {2}'.format(len(sub21),len(sub32),len(sub31)))
             if len(sub21)>nValid:
                 x = sub21['CO10']
                 x_err = sub21['CO10_ERR']
@@ -657,25 +686,31 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 y_err = sub21['CO21_ERR']
                 data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
 
-                ndim, nwalkers = 6,50
+                ndim, nwalkers = 5,50
                 p0 = np.zeros((nwalkers,ndim))
-                p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
+                p0[:,0] = np.arctan(np.random.randn(nwalkers)*0.15+0.7)
                 p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
                 p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
-                p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
-
-                sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
-                                            args=[x,y,x_err,y_err],pool=pool)
-                pos, prob, state = sampler.run_mcmc(p0, 400)
+                p0[:,3] = np.percentile(x,50)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+                if withMPI:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],pool=pool)
+                else:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],threads=threads)
+                pos, prob, state = sampler.run_mcmc(p0, 500)
                 sampler.reset()
                 sampler.run_mcmc(pos,1000)
                 print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
-                                                                                         np.tan(np.median(sampler.flatchain[:,0]))))
+                                                                            np.tan(np.median(sampler.flatchain[:,0]))))
                 badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
 #                pdb.set_trace()
-                splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.21',badprob=badprob)
+                splt.sampler_plot2d_mixture(sampler,data,\
+                                            name=keyname+'.'+name+'.21',\
+                                            badprob=badprob,type='r21')
                 summarize2d(t,sampler21=sampler)
 
             if len(sub32)>nValid:
@@ -684,28 +719,67 @@ def bycategory2d(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                 y = sub32['CO32']
                 y_err = sub32['CO32_ERR']
                 data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
-                ndim, nwalkers = 6,50
+                ndim, nwalkers = 5,50
                 p0 = np.zeros((nwalkers,ndim))
-                p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
-                p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
+                p0[:,0] = np.arctan(np.random.randn(nwalkers)*0.15+0.7)
+                p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+\
+                                                          np.median(y_err)**2) # scatter
                 p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
-                p0[:,3] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,4] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
-                p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
-
-                sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
-                                            args=[x,y,x_err,y_err])
+                p0[:,3] = np.percentile(x,50)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+                if withMPI:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],pool=pool)
+                else:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],threads=threads)
                 pos, prob, state = sampler.run_mcmc(p0, 400)
                 sampler.reset()
                 sampler.run_mcmc(pos,1000)
                 print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
                                                                                          np.tan(np.median(sampler.flatchain[:,0]))))
                 badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
-                splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.32',badprob=badprob)
+                splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.32',\
+                                            badprob=badprob,type='r32')
                 summarize2d(t,sampler32=sampler)
-                t.write('brs_category.'+keyname+'.txt',format='ascii')
+
+            if len(sub31)>nValid:
+                x = sub31['CO10']
+                x_err = sub31['CO10_ERR']
+                y = sub31['CO32']
+                y_err = sub31['CO32_ERR']
+                data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
+                ndim, nwalkers = 5,50
+                p0 = np.zeros((nwalkers,ndim))
+                p0[:,0] = np.arctan(np.random.randn(nwalkers)*0.15+0.7)
+                p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+\
+                                                          np.median(y_err)**2) # scatter
+                p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
+                p0[:,3] = np.percentile(x,50)+np.random.randn(nwalkers)*np.median(x_err)
+                p0[:,4] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+                if withMPI:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],pool=pool)
+                else:
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                                                    lp.logprob2d_scatter_mixture,
+                                                    args=[x,y,x_err,y_err],threads=threads)
+                pos, prob, state = sampler.run_mcmc(p0, 400)
+                sampler.reset()
+                sampler.run_mcmc(pos,1000)
+                print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
+                                                                                         np.tan(np.median(sampler.flatchain[:,0]))))
+                badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
+                splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.31',\
+                                            badprob=badprob,type='r31')
+                summarize2d(t,sampler31=sampler)
+            t.write('brs_category.'+keyname+'.txt',format='ascii')
             it.iternext()
         iter2.iternext()
+    pool.close()
 
 def alldata2d(fitsfile):
     s = fits.getdata(fitsfile)

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+import seaborn as sns
+import pandas as pd
 def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     x = data['x']
     y = data['y']
@@ -120,64 +121,93 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     xoff=0
     if sampler.flatchain.shape[1]==7:
         xoff = np.median(sampler.flatchain[:,2])
-
-    plt.figure(figsize=(6,8))
-    plt.subplot(321)
+    nLines = 20
+    plt.figure(figsize=(6,6))
+    plt.subplot(222)
     plt.hist(1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]),\
                range=[0,2],bins=100)
     plt.xlabel(r'$R_{32}$')
-    plt.subplot(322)
+    plt.subplot(221)
     plt.hist(np.tan(sampler.flatchain[:,1]),range=[0,2],bins=100)
     plt.xlabel(r'$R_{21}$')
 
-    plt.subplot(323)
-    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='copper_r')
-    plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',c=badprob,alpha=0.3)
+    plt.subplot(223)
+    plt.scatter(x,y,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='winter')
+    plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',c=(2*badprob-1),alpha=0.3)
     plt.xlabel('CO(1-0)')
     plt.ylabel('CO(2-1)')
+    cb = plt.colorbar()
+    cb.set_label('Bad Probability')
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,1]))*(testx+xoff),color='r')
+    sshape = sampler.flatchain.shape
+    for line in np.arange(nLines):
+        index = int(np.random.rand(1)*sshape[0])
+        xoff=0
+        plt.plot(testx,np.tan(sampler.flatchain[index,1])*(testx+xoff),
+            alpha=0.3,color='gray')
 
-    plt.subplot(324)
-    plt.errorbar(y,z,xerr=y_err,yerr=y_err,fmt=None,marker=None,mew=0,c=badprob,alpha=0.3,ecolor='black')
-    plt.scatter(y,z,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='copper_r'
+    plt.subplot(224)
+    plt.errorbar(y,z,xerr=y_err,yerr=y_err,fmt=None,marker=None,mew=0,c=(2*badprob-1),
+                 alpha=0.3,ecolor='black')
+    plt.scatter(y,z,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='winter'
                 )
+    cb = plt.colorbar()
+    cb.set_label('Bad Probability')
     plt.xlabel('CO(2-1)')
     plt.ylabel('CO(3-2)')
     testx = np.linspace(np.nanmin(y),np.nanmax(y),10)
     plt.plot(testx,testx/np.tan(np.median(sampler.flatchain[:,0]))/\
                np.sin(np.median(sampler.flatchain[:,1])),color='r')
-    
-    plt.subplot(325)
-    plt.hexbin(np.tan(sampler.flatchain[:,1]),
-             1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]),cmap='copper_r')
-    plt.xlabel(r'$R_{21}$')
-    plt.ylabel(r'$R_{32}$')
 
-    plt.subplot(326)
-    plt.hexbin(np.tan(sampler.flatchain[:,1]),sampler.flatchain[:,2],cmap='copper_r')
-    plt.xlabel(r'$R_{21}$')
-    plt.ylabel(r'Offset')
+    for line in np.arange(nLines):
+        index = int(np.random.rand(1)*sshape[0])
+        xoff=0
+        plt.plot(testx,testx/np.tan(np.median(sampler.flatchain[index,0]))/\
+                 np.sin(np.median(sampler.flatchain[index,1])),
+                 alpha=0.3,color='gray')
+
+    
+    # plt.subplot(325)
+    # plt.hexbin(np.tan(sampler.flatchain[:,1]),
+    #            1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]),cmap='copper_r')
+    # plt.xlabel(r'$R_{21}$')
+    # plt.ylabel(r'$R_{32}$')
+
+    # plt.subplot(326)
+    # plt.hexbin(np.tan(sampler.flatchain[:,1]),sampler.flatchain[:,2],cmap='copper_r')
+    # plt.xlabel(r'$R_{21}$')
+    # plt.ylabel(r'Offset')
     plt.tight_layout()
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
-              orientation='portrait')
+                orientation='portrait')
     plt.close()
     plt.clf()
 
 
-def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None,nLines = 10):
+def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None,nLines = 10,type='r21'):
     x = data['x']
     y = data['y']
     x_err = data['x_err']
     y_err = data['y_err']
     plt.copper()
 
-    plt.figure(figsize=(6,6))
-    plt.subplot(111)
-    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='copper_r')
-    plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',c=badprob,alpha=0.3)
-    plt.xlabel('CO(lower)')
-    plt.ylabel('CO(upper)')
+    plt.figure(figsize=(9,4))
+    plt.subplot(121)
+    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='winter')
+    plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',
+                 c=(2*badprob-1),alpha=0.3)
+    cb = plt.colorbar()
+    cb.set_label('Bad Probability')
+    if type == 'r21':
+        plt.xlabel('CO(1-0) [K km/s]')
+        plt.ylabel('CO(2-1) [K km/s]')
+    if type == 'r32':
+        plt.xlabel('CO(2-1) [K km/s]')
+        plt.ylabel('CO(3-2) [K km/s]')
+    if type == 'r31':
+        plt.xlabel('CO(1-0) [K km/s]')
+        plt.ylabel('CO(3-2) [K km/s]')
 
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
     if sampler.flatchain.shape[1] == 7:
@@ -187,7 +217,7 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         xoff = 0
         UseXoff = False
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
-#    p.tight_layout()
+    plt.tight_layout()
 
     for line in np.arange(nLines):
         index = int(np.random.rand(1)*sampler.flatchain.shape[0])
@@ -198,7 +228,16 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         plt.plot(testx,np.tan(sampler.flatchain[index,0])*(testx+xoff),
             alpha=0.3,color='gray')
 
-
+    # Second panel
+    plt.subplot(122)
+    sns.distplot(np.tan(sampler.flatchain[:,0]))
+    if type == 'r21':
+        plt.xlabel(r'$R_{21}$')
+    if type == 'r32':
+        plt.xlabel(r'$R_{32}$')
+    if type == 'r31':
+        plt.xlabel(r'$R_{31}$')
+    plt.tight_layout()
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
     plt.close()

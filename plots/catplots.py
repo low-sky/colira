@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib import rc
 #rc('text', usetex=True)
 rc('font',family='serif')
+import seaborn as sns
 
 def pressure():
     t = Table.read('brs_category.PRESSURE.txt',format='ascii')
@@ -253,6 +254,60 @@ def multipanel():
     p.savefig('ratio_multifactor.pdf',bbox='tight')
     p.close()
 
+def multipanel_poster():
+    sns.set_context("paper")
+    rc('font',size=9)
+    
+    catlist = ['RGAL','RGALNORM','SPIRE1','IRCOLOR','FUV','UVCOLOR','SFR','PRESSURE',
+               'TDEP']
+    catlabel = [r'$R_{\mathrm{gal}}$ (kpc)',
+                r'$R_{\mathrm{gal}}/R_{25}$',\
+                r'$I_{250}$ (MJy sr$^{-1}$)',\
+                r'$I_{24}/I_{160}$',\
+                r'$I_{\mathrm{FUV}}$ (mJy)',
+                r'$I_{\mathrm{FUV}}/I_{\mathrm{NUV}}$',\
+                r'$\Sigma_{\mathrm{SFR}}$ ($M_{\odot}$ yr$^{-1}$ kpc$^{-2}$)',\
+                r'$P/k$ (K cm$^{-3}$)',\
+                r'$\tau_{\mathrm{dep}} \equiv \Sigma_{\mathrm{H2}}/\Sigma_{\mathrm{SFR}}$ (Gyr)']
+#                r'$\Sigma_{\star}$ ($M_{\odot}$ kpc$^{-2}$ yr$^{-1}$)']
+#                r'$\Sigma_{\mathrm{H2}}/\Sigma_{\mathrm{HI}}$',\
+
+    catfac = np.ones(9)
+    catfac[0] = 1e3
+    catfac[8] = 1e9
+    catax = ['linear','linear','log','log','log','log','log','log','log']
+    fig = p.figure(1,figsize=(7.5,7.5))
+    for ii,tag in enumerate(catlist):
+        t = Table.read('brs_category.'+tag+'.txt',format='ascii')
+#         t['R21+'] = t['R21+']-t['R21']
+#         t['R21-'] = t['R21']-t['R21-']
+#         t['R32+'] = t['R32+']-t['R32']
+#         t['R32-'] = t['R32']-t['R32-']
+        ax = p.subplot(3,3,ii+1)
+        ax.set_xscale(catax[ii])
+        ax.set_ylim(0.0,1.0)
+        ax.set_xlabel(catlabel[ii])
+        if (ii % 3) == 0:
+            ax.set_ylabel(r'Line Ratio')
+        p.errorbar(1e1**t['MedKey32']/catfac[ii],
+                   t['R32'],yerr=[t['R32-'],t['R32+']],\
+                   marker='^',color='red',ecolor='gray',label='$R_{32}$')
+
+        p.errorbar(1e1**t['MedKey21']/catfac[ii],
+                   t['R21'],yerr=[t['R21-'],t['R21+']],\
+                   marker='o',color='blue',ecolor='gray',label='$R_{21}$')
+        p.errorbar(1e1**t['MedKey31']/catfac[ii],
+                   t['R31'],yerr=[t['R31-'],t['R31+']],\
+                   marker='o',color='green',ecolor='gray',label='$R_{31}$')
+
+
+#
+        #p.subplots_adjust(bottom=0.14)
+        if ii==5:
+            p.legend(loc=4)
+    p.tight_layout(h_pad=0.5)    
+    p.savefig('ratio_multifactor.pdf',bbox='tight')
+    p.close()
 
 
 

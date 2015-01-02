@@ -153,28 +153,33 @@ def logprob2d_scatter(p,x,y,x_err,y_err):
 
 
 def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
-    theta,scatter,badfrac,xbad,ybad,badsig= p[0],p[1],p[2],\
-      p[3],p[4],p[5]
+    theta,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
+      p[3],p[4]
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
     if np.abs(badfrac-0.5)>0.5:
         return -np.inf
-    xscale = np.nanmax(x)
-    yscale = np.nanmax(y)
+
+    xbad = badmn*np.cos(theta)
+    ybad = badmn*np.sin(theta)
     xoff = 0
+    nData = len(x)
+    w,v = np.linalg.eig(np.cov([x,y]))
+    datascale = 2*np.sqrt(w.max())
+    datavar = np.sqrt(w.min())
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
     Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
         (np.cos(theta))**2*(y_err**2+scatter**2)
     goodlp = -0.5*(Delta/Sigma)
     BadDelta = (y-ybad)**2+(x-xbad)**2
-    badlp =-0.5*(BadDelta/(Sigma+badsig**2))
+    badlp =-0.5*(BadDelta/(badsig**2))
+    ratio = np.tan(theta)
+#         +nData*ss.norm.logpdf(badfrac/0.1)+\
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
-        +ss.norm.logpdf(badfrac/0.001)+\
-        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
-        np.sum(ss.invgamma.logpdf(badsig**2/(xscale**2+yscale**2),1))+\
-        np.sum(ss.norm.logpdf(xbad/xscale,1))+\
-        np.sum(ss.norm.logpdf(ybad/yscale,1))+\
-        ss.beta.logpdf(2*theta/np.pi,20,40)
+         +nData*ss.norm.logpdf(badfrac/0.1)+\
+        nData*ss.invgamma.logpdf(scatter**2/datavar**2,1)+\
+        nData*ss.invgamma.logpdf(badsig**2/datascale**2,1)+\
+        ss.norm.logpdf(ratio,0.6,0.3)
 # factor of 10 to make badsig really big.
     if np.isnan(lp):
         pdb.set_trace()
@@ -196,7 +201,7 @@ def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
     badlp =-0.5*(BadDelta/(Sigma+badsig**2))
 
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
-        +ss.norm.logpdf(badfrac/0.005)+\
+        +ss.beta.logpdf(badfrac,5,10)+\
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
         ss.beta.logpdf(2*theta/np.pi,20,40)
@@ -231,6 +236,8 @@ def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
         (y-badmn*np.sin(phi)*np.sin(theta))**2+\
         (z-badmn*np.cos(theta))**2
     badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+    r32 = np.tan(phi)
+    r21 = 1/np.tan(theta)/np.sin(phi)
     lp = np.sum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
         ss.norm.logpdf(badfrac/0.005)+\
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2+z_err**2),1))+\
@@ -253,8 +260,9 @@ def logprob3d_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
     if np.abs(badfrac-0.5) > 0.5:
         return -np.inf
     xoff = 0.0
-    datascale = np.percentile(y,90)
-       
+    w,v = np.linalg.eig(np.cov([x,y,z]))
+    datascale = 2*np.sqrt(w.max())
+    datavar = 0.5*np.sqrt((np.sort(w))[1])
         # Distance between ray at theta, phi and a point x,y,z
     #Gamma is the dot product of the data vector along the theoretical lin
     Gamma = (x+xoff)*np.sin(theta)*np.cos(phi)+\
@@ -271,14 +279,15 @@ def logprob3d_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
         (y-badmn*np.sin(phi)*np.sin(theta))**2+\
         (z-badmn*np.cos(theta))**2
     badlp =-0.5*(BadDelta/(Sigma2+badsig**2))
+    r32 = np.tan(phi)
+    r21 = 1/np.tan(theta)/np.sin(phi)
     lp = np.sum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
         ss.norm.logpdf(badfrac/0.001)+\
         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2+z_err**2),1))+\
-        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2+z_err**2)/100,1))+\
-        np.sum(ss.norm.logpdf(badmn/(2*datascale),1,3))+\
-        ss.beta.logpdf(2*theta/np.pi,20,40)+\
-        ss.beta.logpdf(2*phi/np.pi,20,40)
-# factor of 10 to make badsig really big.
+        np.sum(ss.invgamma.logpdf(badsig**2/datascale**2,1))+\
+        np.sum(ss.norm.logpdf((badmn-datascale/2)/(datascale),0,1))+\
+        ss.norm.logpdf(r21,0.6,0.2)+\
+        ss.norm.logpdf(r32,0.5,0.2)
     if np.isnan(lp):
         pdb.set_trace()
     return lp
