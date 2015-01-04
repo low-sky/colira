@@ -540,9 +540,10 @@ def bygal2d(fitsfile,spire_cut=3.0):
             t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
 
-def bycategory2d(fitsfile,category=['SPIRE1','RGALNORM','FUV',
+def bycategory2d(fitsfile,category=['FUV',
                                     'UVCOLOR','IRCOLOR',
-                                    'STELLARSD','PRESSURE','TDEP','MOLRAT','SFR','RGAL'],
+                                    'STELLARSD','PRESSURE','TDEP','MOLRAT','SFR','RGAL',
+                                    'SPIRE1','RGALNORM'],
                  spire_cut=3.0,withMPI = False,threads=1):
     category = np.array(category)
     s = fits.getdata(fitsfile)

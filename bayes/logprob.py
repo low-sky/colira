@@ -179,7 +179,7 @@ def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
          +nData*ss.norm.logpdf(badfrac/0.1)+\
         nData*ss.invgamma.logpdf(scatter**2/datavar**2,1)+\
         nData*ss.invgamma.logpdf(badsig**2/datascale**2,1)+\
-        ss.norm.logpdf(ratio,0.6,0.3)
+        nData*ss.norm.logpdf(ratio,0.6,0.4)
 # factor of 10 to make badsig really big.
     if np.isnan(lp):
         pdb.set_trace()

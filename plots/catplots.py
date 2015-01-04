@@ -263,7 +263,7 @@ def multipanel_poster():
     catlabel = [r'$R_{\mathrm{gal}}$ (kpc)',
                 r'$R_{\mathrm{gal}}/R_{25}$',\
                 r'$I_{250}$ (MJy sr$^{-1}$)',\
-                r'$I_{24}/I_{160}$',\
+                r'$0.01 I_{24}/I_{160}$',\
                 r'$I_{\mathrm{FUV}}$ (mJy)',
                 r'$I_{\mathrm{FUV}}/I_{\mathrm{NUV}}$',\
                 r'$\Sigma_{\mathrm{SFR}}$ ($M_{\odot}$ yr$^{-1}$ kpc$^{-2}$)',\
@@ -274,8 +274,9 @@ def multipanel_poster():
 
     catfac = np.ones(9)
     catfac[0] = 1e3
+    catfac[3] = 1e-2
     catfac[8] = 1e9
-    catax = ['linear','linear','log','log','log','log','log','log','log']
+    catax = ['linear','linear','log','linear','log','linear','log','log','linear']
     fig = p.figure(1,figsize=(7.5,7.5))
     for ii,tag in enumerate(catlist):
         t = Table.read('brs_category.'+tag+'.txt',format='ascii')
@@ -303,8 +304,8 @@ def multipanel_poster():
 
 #
         #p.subplots_adjust(bottom=0.14)
-        if ii==5:
-            p.legend(loc=4)
+        if ii==2:
+            p.legend(loc=2)
     p.tight_layout(h_pad=0.5)    
     p.savefig('ratio_multifactor.pdf',bbox='tight')
     p.close()
