@@ -201,12 +201,14 @@ def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
     goodlp = -0.5*(Delta/Sigma)
     BadDelta = (y-ybad)**2+(x-xbad)**2
     badlp =-0.5*(BadDelta/(Sigma+badsig**2))
-
-    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
-        +ss.beta.logpdf(badfrac,5,10)+\
-        np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
-        np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
-        ss.beta.logpdf(2*theta/np.pi,20,40)
+    # Bad mean must be within the data range
+    badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+\
+                ss.uniform.logpdf(ybad,y.min(),y.max()-y.min())+\
+                ss.beta.logpdf(badfrac,1,5))
+    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
+         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
+         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
+         ss.beta.logpdf(2*theta/np.pi,20,40)+badprior
     if np.isnan(lp):
         pdb.set_trace()
     return lp

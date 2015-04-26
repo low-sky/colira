@@ -35,6 +35,7 @@ def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     plt.xlabel('CO(2-1)')
     plt.ylabel('CO(3-2)')
     testx = np.linspace(np.nanmin(y),np.nanmax(y),10)
+
     plt.plot(testx,testx/np.tan(np.median(sampler.flatchain[:,0]))/\
                np.sin(np.median(sampler.flatchain[:,1])),color='r')
     
@@ -192,13 +193,13 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
     y = data['y']
     x_err = data['x_err']
     y_err = data['y_err']
-    plt.copper()
+#    plt.copper()
 
     plt.figure(figsize=(9,4))
     plt.subplot(121)
-    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='winter')
+    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='winter',vmin=0,vmax=1)
     plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',
-                 c=(2*badprob-1),alpha=0.3)
+                 c=badprob,alpha=0.3,vmin=0,vmax=1)
     cb = plt.colorbar()
     cb.set_label('Bad Probability')
     if type == 'r21':
@@ -219,17 +220,17 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         xoff = 0
         UseXoff = False
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
-    plt.tight_layout()
+
 
     for line in np.arange(nLines):
-        index = (np.random.rand(nLines)*sampler.flatchain.shape[0]).astype(int)
+        index = (np.random.rand(1)*sampler.flatchain.shape[0]).astype(int)
         if UseXoff:
             xoff = sampler.flatchain[index,1]
         else:
             xoff=0
         plt.plot(testx,np.tan(sampler.flatchain[index,0])*(testx+xoff),
             alpha=0.3,color='gray')
-
+#        pdb.set_trace()
 #    Second panel
     plt.subplot(122)
     sns.distplot(np.tan(sampler.flatchain[:,0]))

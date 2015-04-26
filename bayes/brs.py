@@ -9,7 +9,7 @@ from matplotlib import rc
 from astropy.table import Table, Column
 import pdb
 import sys
-rc('text',usetex=True)
+#rc('text',usetex=True)
 try:
     import mpi4py
     from emcee.utils import MPIPool
@@ -102,12 +102,12 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
         ybad = np.sin(theta)*badmn
         Delta = (np.cos(theta)*y[idx] - np.sin(theta)*(x[idx]+xoff))**2
         Sigma = (np.sin(theta))**2*(x_err[idx]**2+scatter**2)+\
-            (np.cos(theta))**2*(y_err[idx]**2+scatter**2)
+                (np.cos(theta))**2*(y_err[idx]**2+scatter**2)
         goodlp = -0.5*(Delta/Sigma)
         BadDelta = (y[idx]-ybad)**2+(x[idx]-xbad)**2
         badlp =-0.5*(BadDelta/(Sigma+badsig**2))
 # run percentiles over chains!
-        pbad[idx] = np.percentile(np.exp(badlp)/(np.exp(badlp)+np.exp(goodlp)),50)
+        pbad[idx] = np.percentile(badfrac*np.exp(badlp)/((badfrac*np.exp(badlp))+(1-badfrac)*np.exp(goodlp)),50)
     return pbad
 
 
@@ -313,9 +313,6 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
                   (s['SPIRE1']> spire_cut))
     sub = s[SignifData]
 
-    
-    
-
     Signif21 = ((s['CO10']>cut*s['CO10_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 (s['INTERF']==0)&\
@@ -445,6 +442,13 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
         iter2.iternext()
 
 def byradius(fitsfile,spire_cut=3.0,threads=1):
+    s = fits.getdata(fitsfile)
+    hdr = fits.getheader(fitsfile)
+    GalNames = np.unique(s['GALNAME'])
+    cut = -2
+    nGal = len(GalNames)
+    it = np.nditer(GalNames,flags=['f_index'])
+
     pass
 
 def bygal2d(fitsfile,spire_cut=3.0,threads=1):
@@ -509,7 +513,7 @@ def bygal2d(fitsfile,spire_cut=3.0,threads=1):
             print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
                                                                                      np.tan(np.median(sampler.flatchain[:,0]))))
             badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
-            splt.sampler_plot2d_mixture(sampler,data,name=name+'.21',badprob=badprob)
+            splt.sampler_plot2d_mixture(sampler,data,name=name+'.21',badprob=badprob,type='r21')
             summarize2d(t,sampler21=sampler)
 
         if len(sub32)>1:
