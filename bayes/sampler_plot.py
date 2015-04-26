@@ -219,7 +219,7 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         xoff = 0
         UseXoff = False
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
-#    plt.tight_layout()
+    plt.tight_layout()
 
     for line in np.arange(nLines):
         index = (np.random.rand(nLines)*sampler.flatchain.shape[0]).astype(int)
@@ -230,20 +230,17 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         plt.plot(testx,np.tan(sampler.flatchain[index,0])*(testx+xoff),
             alpha=0.3,color='gray')
 
-    # Second panel
-#    plt.subplot(122)
-#    sns.distplot(np.tan(sampler.flatchain[:,0]))
-#    if type == 'r21':
-#        plt.xlabel(r'$R_{21}$')
-#    if type == 'r32':
-#        plt.xlabel(r'$R_{32}$')
-#    if type == 'r31':
-#        plt.xlabel(r'$R_{31}$')
-#    plt.tight_layout()
-#    pdb.set_trace()
-
+#    Second panel
+    plt.subplot(122)
+    sns.distplot(np.tan(sampler.flatchain[:,0]))
+    if type == 'r21':
+        plt.xlabel(r'$R_{21}$')
+    if type == 'r32':
+        plt.xlabel(r'$R_{32}$')
+    if type == 'r31':
+        plt.xlabel(r'$R_{31}$')
+    plt.tight_layout()
     
-    plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
-              orientation='portrait')
+    plt.savefig(figdir+name+suffix+'.pdf')
     plt.close()
     plt.clf()

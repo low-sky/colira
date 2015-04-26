@@ -444,6 +444,8 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
         t2.write('brs_category.'+keyname+'.tex',format='latex')
         iter2.iternext()
 
+def byradius(fitsfile,spire_cut=3.0,threads=1):
+    pass
 
 def bygal2d(fitsfile,spire_cut=3.0,threads=1):
     s = fits.getdata(fitsfile)
@@ -535,7 +537,7 @@ def bygal2d(fitsfile,spire_cut=3.0,threads=1):
             print('Name {0}, Acceptance Fraction {1}, Ratio {2}'.format(name,np.mean(sampler.acceptance_fraction),
                                                                                      np.tan(np.median(sampler.flatchain[:,0]))))
             badprob = logprob2d_checkbaddata(sampler,x,y,x_err,y_err)
-            splt.sampler_plot2d_mixture(sampler,data,name=name+'.32',badprob=badprob)
+            splt.sampler_plot2d_mixture(sampler,data,name=name+'.32',badprob=badprob,type='r32')
             summarize2d(t,sampler32=sampler)
             t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
