@@ -106,8 +106,9 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
         goodlp = -0.5*(Delta/Sigma)
         BadDelta = (y[idx]-ybad)**2+(x[idx]-xbad)**2
         badlp =-0.5*(BadDelta/(Sigma+badsig**2))
-# run percentiles over chains!
+        # run percentiles over chains!
         pbad[idx] = np.percentile(badfrac*np.exp(badlp)/((badfrac*np.exp(badlp))+(1-badfrac)*np.exp(goodlp)),50)
+
     return pbad
 
 

@@ -204,7 +204,7 @@ def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
     # Bad mean must be within the data range
     badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+\
                 ss.uniform.logpdf(ybad,y.min(),y.max()-y.min())+\
-                ss.beta.logpdf(badfrac,1,5))
+                ss.beta.logpdf(badfrac,1,10))
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
          np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
          np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
