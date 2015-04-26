@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import pandas as pd
+import pdb
 def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     x = data['x']
     y = data['y']
@@ -14,10 +15,10 @@ def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     plt.subplot(321)
     plt.hist(1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]),\
                range=[0,2],bins=100)
-    plt.xlabel(r'$R_{32}$')
+    plt.xlabel('$R_{32}$')
     plt.subplot(322)
     plt.hist(np.tan(sampler.flatchain[:,1]),range=[0,2],bins=100)
-    plt.xlabel(r'$R_{21}$')
+    plt.xlabel('$R_{21}$')
 
     plt.subplot(323)
     plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker=None,mew=0)
@@ -40,13 +41,13 @@ def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     plt.subplot(325)
     plt.hexbin(np.tan(sampler.flatchain[:,1]),
              1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]))
-    plt.xlabel(r'$R_{21}$')
-    plt.ylabel(r'$R_{32}$')
+    plt.xlabel('$R_{21}$')
+    plt.ylabel('$R_{32}$')
 
     plt.subplot(326)
     plt.hexbin(np.tan(sampler.flatchain[:,1]),sampler.flatchain[:,2])
-    plt.xlabel(r'$R_{21}$')
-    plt.ylabel(r'Offset')
+    plt.xlabel('$R_{21}$')
+    plt.ylabel('Offset')
     plt.tight_layout()
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
@@ -58,7 +59,7 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
     plt.figure(figsize=(6,6))
     plt.subplot(221)
     plt.hist(np.tan(sampler.flatchain[:,0]),range=[0,2],bins=100)
-    plt.xlabel(r'$R_{21}$')
+    plt.xlabel('$R_{21}$')
 
     plt.subplot(222)
     plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker=None,mew=0)
@@ -92,7 +93,7 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
     sigma = (sampler.flatchain[:,1]**2+sampler.flatchain[:,2]**2)**0.5
     plt.subplot(223)
     plt.hexbin(np.tan(sampler.flatchain[:,0]),sigma)
-    plt.xlabel(r'$R$')
+    plt.xlabel('$R$')
     plt.ylabel('Scatter')
 
     plt.subplot(224)
@@ -100,7 +101,8 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
         plt.hist(sampler.flatchain[:,4])
     else:
         plt.hist(sampler.flatchain[:,3])
-    plt.xlabel(r'$f_{bad}$')
+    plt.xlabel('$f_{bad}$')
+
 
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
         orientation='portrait')
@@ -210,17 +212,17 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         plt.ylabel('CO(3-2) [K km/s]')
 
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
-    if sampler.flatchain.shape[1] == 7:
+    if sampler.flatchain.shape[1] == 6:
         xoff = np.median(sampler.flatchain[:,1])
         UseXoff = True
     else:
         xoff = 0
         UseXoff = False
     plt.plot(testx,np.tan(np.median(sampler.flatchain[:,0]))*(testx+xoff),color='r')
-    plt.tight_layout()
+#    plt.tight_layout()
 
     for line in np.arange(nLines):
-        index = int(np.random.rand(1)*sampler.flatchain.shape[0])
+        index = (np.random.rand(nLines)*sampler.flatchain.shape[0]).astype(int)
         if UseXoff:
             xoff = sampler.flatchain[index,1]
         else:
@@ -229,15 +231,18 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
             alpha=0.3,color='gray')
 
     # Second panel
-    plt.subplot(122)
-    sns.distplot(np.tan(sampler.flatchain[:,0]))
-    if type == 'r21':
-        plt.xlabel(r'$R_{21}$')
-    if type == 'r32':
-        plt.xlabel(r'$R_{32}$')
-    if type == 'r31':
-        plt.xlabel(r'$R_{31}$')
-    plt.tight_layout()
+#    plt.subplot(122)
+#    sns.distplot(np.tan(sampler.flatchain[:,0]))
+#    if type == 'r21':
+#        plt.xlabel(r'$R_{21}$')
+#    if type == 'r32':
+#        plt.xlabel(r'$R_{32}$')
+#    if type == 'r31':
+#        plt.xlabel(r'$R_{31}$')
+#    plt.tight_layout()
+#    pdb.set_trace()
+
+    
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
               orientation='portrait')
     plt.close()

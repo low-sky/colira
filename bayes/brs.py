@@ -96,6 +96,7 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
             sampler.flatchain[:,4]
         xoff=0
     pbad = np.zeros(x.size)
+
     for idx,value in enumerate(x):
         xbad = np.cos(theta)*badmn
         ybad = np.sin(theta)*badmn
@@ -444,7 +445,7 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
         iter2.iternext()
 
 
-def bygal2d(fitsfile,spire_cut=3.0):
+def bygal2d(fitsfile,spire_cut=3.0,threads=1):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
@@ -489,18 +490,17 @@ def bygal2d(fitsfile,spire_cut=3.0):
 
             t['Npts'][-1]=x.size
             data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
-            ndim, nwalkers = 7,50
+            ndim, nwalkers = 6,50
             p0 = np.zeros((nwalkers,ndim))
             p0[:,0] = np.pi/6+np.random.randn(nwalkers)*np.pi/8
             p0[:,1] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
             p0[:,2] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
             p0[:,3] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
             p0[:,4] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
-            p0[:,5] = np.percentile(y,95)+np.random.randn(nwalkers)*np.median(x_err)
-            p0[:,6] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
+            p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
             
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_xoff_scatter_mixture,
-                                        args=[x,y,x_err,y_err])
+                                            args=[x,y,x_err,y_err], threads = threads)
             pos, prob, state = sampler.run_mcmc(p0, 400)
             sampler.reset()
             sampler.run_mcmc(pos,1000)
@@ -528,7 +528,7 @@ def bygal2d(fitsfile,spire_cut=3.0):
             p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
 
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob2d_scatter_mixture,
-                                        args=[x,y,x_err,y_err])
+                                            args=[x,y,x_err,y_err],threads=threads)
             pos, prob, state = sampler.run_mcmc(p0, 400)
             sampler.reset()
             sampler.run_mcmc(pos,1000)

@@ -186,12 +186,14 @@ def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
     return lp
 
 def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
-    theta,xoff,scatter,badfrac,xbad,ybad,badsig= p[0],p[1],p[2],\
-      p[3],p[4],p[5],p[6]
+    theta,xoff,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
+      p[3],p[4],p[5]
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
     if np.abs(badfrac-0.5)>0.5:
         return -np.inf
+    xbad = badmn*np.cos(theta)
+    ybad = badmn*np.sin(theta)
     datascale = np.percentile(x,90)
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
     Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
