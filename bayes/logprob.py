@@ -153,62 +153,62 @@ def logprob2d_scatter(p,x,y,x_err,y_err):
 
 
 def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
-    theta,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
-      p[3],p[4]
+    theta,scatter,badfrac,xbad,ybad,badsig= p[0],p[1],p[2],\
+      p[3],p[4],p[5]
+
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
-    if np.abs(badfrac-0.5)>0.5:
-        return -np.inf
 
-    xbad = badmn*np.cos(theta)
-    ybad = badmn*np.sin(theta)
+    badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+\
+                ss.uniform.logpdf(ybad,y.min(),y.max()-y.min())+\
+                ss.beta.logpdf(badfrac,1,10))
+    # Fail early; fail often
+    if not np.isfinite(badprior):
+        return badprior
+
     xoff = 0
     nData = len(x)
-    w,v = np.linalg.eig(np.cov([x,y]))
-    datascale = 2*np.sqrt(w.max())
-    datavar = np.sqrt(w.min())
+
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
-    Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
+    Var = (np.sin(theta))**2*(x_err**2+scatter**2)+\
         (np.cos(theta))**2*(y_err**2+scatter**2)
-    goodlp = -0.5*(Delta/Sigma)
+    goodlp = -0.5*(Delta/Var)-np.log(Var)
     BadDelta = (y-ybad)**2+(x-xbad)**2
-    badlp =-0.5*(BadDelta/(badsig**2))
-    ratio = np.tan(theta)
-#         +nData*ss.norm.logpdf(badfrac/0.1)+\
-    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))\
-         +nData*ss.norm.logpdf(badfrac/0.1)+\
-        nData*ss.invgamma.logpdf(scatter**2/datavar**2,1)+\
-        nData*ss.invgamma.logpdf(badsig**2/datascale**2,1)+\
-        nData*ss.norm.logpdf(ratio,0.6,0.4)
-# factor of 10 to make badsig really big.
+    badlp =-0.5*(BadDelta/(Var+badsig**2))-0.5*np.log(Var+badsig**2)
+    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
+         ss.beta.logpdf(2*theta/np.pi,2,4)*x.size
+
     if np.isnan(lp):
         pdb.set_trace()
     return lp
 
 def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
-    theta,xoff,scatter,badfrac,badmn,badsig= p[0],p[1],p[2],\
-      p[3],p[4],p[5]
+    theta,xoff,scatter,badfrac,xbad,ybad,badsig= p[0],p[1],p[2],\
+      p[3],p[4],p[5],p[6]
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
     if np.abs(badfrac-0.5)>0.5:
         return -np.inf
-    xbad = badmn*np.cos(theta)
-    ybad = badmn*np.sin(theta)
-    datascale = np.percentile(x,90)
-    Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
-    Sigma = (np.sin(theta))**2*(x_err**2+scatter**2)+\
-        (np.cos(theta))**2*(y_err**2+scatter**2)
-    goodlp = -0.5*(Delta/Sigma)
-    BadDelta = (y-ybad)**2+(x-xbad)**2
-    badlp =-0.5*(BadDelta/(Sigma+badsig**2))
-    # Bad mean must be within the data range
+
     badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+\
                 ss.uniform.logpdf(ybad,y.min(),y.max()-y.min())+\
                 ss.beta.logpdf(badfrac,1,10))
+    # Fail early; fail often
+    if not np.isfinite(badprior):
+        return badprior
+
+    Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
+    Var = (np.sin(theta))**2*(x_err**2+scatter**2)+\
+        (np.cos(theta))**2*(y_err**2+scatter**2)
+    goodlp = -0.5*(Delta/Var)-np.log(Var)
+    BadDelta = (y-ybad)**2+(x-xbad)**2
+    badlp =-0.5*(BadDelta/(Var+badsig**2))-0.5*np.log(Var+badsig**2)
     lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
-         np.sum(ss.invgamma.logpdf(scatter**2/(x_err**2+y_err**2),1))+\
-         np.sum(ss.invgamma.logpdf(badsig**2/(x_err**2+y_err**2)/100,1))+\
-         ss.beta.logpdf(2*theta/np.pi,20,40)+badprior
+         ss.beta.logpdf(2*theta/np.pi,2,4)*x.size
+
+
+
+
     if np.isnan(lp):
         pdb.set_trace()
     return lp

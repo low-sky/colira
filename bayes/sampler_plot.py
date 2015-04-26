@@ -213,7 +213,7 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
         plt.ylabel('CO(3-2) [K km/s]')
 
     testx = np.linspace(np.nanmin(x),np.nanmax(x),10)
-    if sampler.flatchain.shape[1] == 6:
+    if sampler.flatchain.shape[1] == 7:
         xoff = np.median(sampler.flatchain[:,1])
         UseXoff = True
     else:
