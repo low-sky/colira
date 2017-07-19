@@ -8,7 +8,7 @@ import seaborn as sns
 
 def pressure():
     t = Table.read('brs_category.PRESSURE.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -34,7 +34,7 @@ def pressure():
 
 def sfr():
     t = Table.read('brs_category.SFR.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -60,7 +60,7 @@ def sfr():
 
 def uvcolor():
     t = Table.read('brs_category.UVCOLOR.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -86,7 +86,7 @@ def uvcolor():
 
 def stellarsd():
     t = Table.read('brs_category.STELLARSD.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -113,7 +113,7 @@ def stellarsd():
 
 def rgalnorm():
     t = Table.read('brs_category.RGALNORM.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -138,7 +138,7 @@ def rgalnorm():
 
 def rgal():
     t = Table.read('brs_category.RGAL.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -163,7 +163,7 @@ def rgal():
 
 def ircolor():
     t = Table.read('brs_category.IRCOLOR.txt',format='ascii')
-    
+
     t['R21+'] = t['R21+']-t['R21']
     t['R21-'] = t['R21']-t['R21-']
     t['R32+'] = t['R32+']-t['R32']
@@ -239,25 +239,29 @@ def multipanel():
         ax.set_xlabel(catlabel[ii])
         if (ii % 3) == 0:
             ax.set_ylabel(r'Line Ratio')
-        p.errorbar(1e1**t['MedKey32']/catfac[ii],
-                   t['R32'],yerr=[t['R32-'],t['R32+']],\
-                   marker='^',color='black',ecolor='gray',label='$R_{32}$')
+        try:
+            p.errorbar(1e1**t['MedKey32']/catfac[ii],
+                       t['R32'],yerr=[t['R32-'],t['R32+']],\
+                       marker='^',color='black',ecolor='gray',label='$R_{32}$')
 
-        p.errorbar(1e1**t['MedKey21']/catfac[ii],
-                   t['R21'],yerr=[t['R21-'],t['R21+']],\
-                   marker='o',color='black',ecolor='gray',label='$R_{21}$')
+            p.errorbar(1e1**t['MedKey21']/catfac[ii],
+                       t['R21'],yerr=[t['R21-'],t['R21+']],\
+                       marker='o',color='black',ecolor='gray',label='$R_{21}$')
+
+        except:
+            pass
 #
         #p.subplots_adjust(bottom=0.14)
         if ii==5:
             p.legend(loc=4)
-    p.tight_layout(h_pad=0.5)    
+    p.tight_layout(h_pad=0.5)
     p.savefig('ratio_multifactor.pdf',bbox='tight')
     p.close()
 
 def multipanel_poster():
     sns.set_context("paper")
     rc('font',size=9)
-    
+
     catlist = ['RGAL','RGALNORM','SPIRE1','IRCOLOR','FUV','UVCOLOR','SFR','PRESSURE',
                'TDEP']
     catlabel = [r'$R_{\mathrm{gal}}$ (kpc)',
@@ -290,26 +294,29 @@ def multipanel_poster():
         ax.set_xlabel(catlabel[ii])
         if (ii % 3) == 0:
             ax.set_ylabel(r'Line Ratio')
-        p.errorbar(1e1**t['MedKey32']/catfac[ii],
-                   t['R32'],yerr=[t['R32-'],t['R32+']],\
-                   marker='^',color='red',ecolor='gray',label='$R_{32}$')
 
-        p.errorbar(1e1**t['MedKey21']/catfac[ii],
-                   t['R21'],yerr=[t['R21-'],t['R21+']],\
-                   marker='o',color='blue',ecolor='gray',label='$R_{21}$')
-        p.errorbar(1e1**t['MedKey31']/catfac[ii],
-                   t['R31'],yerr=[t['R31-'],t['R31+']],\
-                   marker='o',color='green',ecolor='gray',label='$R_{31}$')
+        try:
+            p.errorbar(1e1**t['MedKey32']/catfac[ii],
+                       t['R32'],yerr=[t['R32-'],t['R32+']],\
+                       marker='^',color='red',ecolor='gray',label='$R_{32}$')
 
+            p.errorbar(1e1**t['MedKey21']/catfac[ii],
+                       t['R21'],yerr=[t['R21-'],t['R21+']],\
+                       marker='o',color='blue',ecolor='gray',label='$R_{21}$')
+            p.errorbar(1e1**t['MedKey31']/catfac[ii],
+                       t['R31'],yerr=[t['R31-'],t['R31+']],\
+                       marker='o',color='green',ecolor='gray',label='$R_{31}$')
 
+        except:
+            pass
 #
         #p.subplots_adjust(bottom=0.14)
         if ii==2:
             p.legend(loc=2)
-    p.tight_layout(h_pad=0.5)    
+    p.tight_layout(h_pad=0.5)
     p.savefig('ratio_multifactor.pdf',bbox='tight')
     p.close()
 
 
 
-    
+

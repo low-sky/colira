@@ -153,15 +153,14 @@ def logprob2d_scatter(p,x,y,x_err,y_err):
 
 
 def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
-    theta,scatter,badfrac,xbad,ybad,badsig= p[0],p[1],p[2],\
-      p[3],p[4],p[5]
+    theta, scatter, badfrac, xbad, ybad, badsig = p[0], p[1], p[2], p[3], p[4], p[5]
 
     if np.abs(theta-np.pi/4)>np.pi/4:
         return -np.inf
 
-    badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+\
-                ss.uniform.logpdf(ybad,y.min(),y.max()-y.min())+\
-                ss.beta.logpdf(badfrac,1,10))
+    badprior = (ss.uniform.logpdf(xbad,x.min(),x.max()-x.min())+
+                ss.uniform.logpdf(ybad,y.min(),y.max()-y.min()))
+
     # Fail early; fail often
     if not np.isfinite(badprior):
         return badprior
@@ -170,13 +169,22 @@ def logprob2d_scatter_mixture(p,x,y,x_err,y_err):
     nData = len(x)
 
     Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
-    Var = (np.sin(theta))**2*(x_err**2+scatter**2)+\
-        (np.cos(theta))**2*(y_err**2+scatter**2)
-    goodlp = -0.5*(Delta/Var)-np.log(Var)
+    Var = (np.sin(theta))**2*(x_err**2 + scatter**2)+\
+        (np.cos(theta))**2*(y_err**2 + scatter**2)
+    goodlp = -0.5*(Delta / Var) - np.log(Var)
     BadDelta = (y-ybad)**2+(x-xbad)**2
-    badlp =-0.5*(BadDelta/(Var+badsig**2))-0.5*np.log(Var+badsig**2)
-    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
-         ss.beta.logpdf(2*theta/np.pi,2,4)*x.size
+    badlp =-0.5 * (BadDelta / (Var + badsig**2)) - 0.5 * np.log(Var + badsig**2)
+
+
+    DataVar = np.nanstd(x)**2 + np.nanstd(y)**2
+
+    lp = (np.nansum(np.log(np.exp(goodlp) *
+                           (1 - badfrac) + np.exp(badlp) * badfrac)) +
+          ss.beta.logpdf(2 * theta / np.pi, 1, 1) * x.size +
+          ss.beta.logpdf(badfrac, 2, 10) * x.size +
+          np.sum(ss.invgamma.pdf(Var / (x_err**2 + y_err**2), 1000, 1e-3)) +
+          ss.invgamma.pdf(badsig / DataVar, 1000, 1e-3))
+
 
     if np.isnan(lp):
         pdb.set_trace()
@@ -203,10 +211,9 @@ def logprob2d_xoff_scatter_mixture(p,x,y,x_err,y_err):
     goodlp = -0.5*(Delta/Var)-np.log(Var)
     BadDelta = (y-ybad)**2+(x-xbad)**2
     badlp =-0.5*(BadDelta/(Var+badsig**2))-0.5*np.log(Var+badsig**2)
-    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))+\
-         ss.beta.logpdf(2*theta/np.pi,2,4)*x.size
-
-
+    lp = np.nansum(np.log(np.exp(goodlp)*(1-badfrac)+np.exp(badlp)*badfrac))
+#+\
+#         ss.beta.logpdf(2*theta/np.pi,2,4)*x.size
 
 
     if np.isnan(lp):
@@ -221,9 +228,9 @@ def logprob3d_xoff_scatter_mixture(p,x,y,z,x_err,y_err,z_err):
         return -np.inf
     if np.abs(badfrac-0.5) > 0.5:
         return -np.inf
-    
+
     datascale = np.percentile(y,90)
-       
+
     # Distance between ray at theta, phi and a point x,y,z
     #Gamma is the dot product of the data vector along the theoretical lin
     Gamma = (x+xoff)*np.sin(theta)*np.cos(phi)+\
@@ -308,12 +315,12 @@ def logprob2d_kelly(p,x,y,x_err,y_err):
         return(-np.inf)
     if rho<0:
         return(-np.inf)
-    if rho>1: 
+    if rho>1:
         return(-np.inf)
     if sigy>sigx:
         return(-np.inf)
 
-    covmodel = np.matrix([[sigx**2,rho*sigx*sigy],[rho*sigx*sigy,sigy**2]])    
+    covmodel = np.matrix([[sigx**2,rho*sigx*sigy],[rho*sigx*sigy,sigy**2]])
     meanmodel = np.matrix([[mux],[muy]])
     for i in np.arange(len(x)):
         covdata = np.matrix([[x_err[i]**2,0],[0,y_err[i]**2]])

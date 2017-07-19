@@ -3,7 +3,7 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 import pdb
-def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
+def sampler_plot(sampler,data,figdir = './plots/',suffix='',name=None):
     x = data['x']
     y = data['y']
     z = data['z']
@@ -38,7 +38,7 @@ def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
 
     plt.plot(testx,testx/np.tan(np.median(sampler.flatchain[:,0]))/\
                np.sin(np.median(sampler.flatchain[:,1])),color='r')
-    
+
     plt.subplot(325)
     plt.hexbin(np.tan(sampler.flatchain[:,1]),
              1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]))
@@ -55,7 +55,7 @@ def sampler_plot(sampler,data,figdir = '../plots/',suffix='',name=None):
     plt.close()
     plt.clf()
 
-def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
+def sampler_plot2d(sampler,figdir = './plots/',suffix='',
                    xoff=None,name=None,nLines=10):
     plt.figure(figsize=(6,6))
     plt.subplot(221)
@@ -90,7 +90,7 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
            (testx+xoff),color='r')
     plt.ylim((np.nanmin(y),np.nanmax(y)))
     plt.xlim((np.nanmin(x),np.nanmax(x)))
-    
+
     sigma = (sampler.flatchain[:,1]**2+sampler.flatchain[:,2]**2)**0.5
     plt.subplot(223)
     plt.hexbin(np.tan(sampler.flatchain[:,0]),sigma)
@@ -108,13 +108,13 @@ def sampler_plot2d(sampler,figdir = '../plots/',suffix='',
     plt.savefig(figdir+name+suffix+'.pdf',format='pdf',
         orientation='portrait')
 
-    plt.tight_layout()        
+    plt.tight_layout()
     plt.close()
     plt.clf()
 
 
 
-def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None):
+def sampler_plot_mixture(sampler,data,figdir = './plots/',suffix='',name=None,badprob=None):
     x = data['x']
     y = data['y']
     z = data['z']
@@ -135,7 +135,7 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     plt.xlabel(r'$R_{21}$')
 
     plt.subplot(223)
-    plt.scatter(x,y,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='winter')
+    plt.scatter(x,y,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='viridis')
     plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',c=(2*badprob-1),alpha=0.3)
     plt.xlabel('CO(1-0)')
     plt.ylabel('CO(2-1)')
@@ -153,7 +153,7 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     plt.subplot(224)
     plt.errorbar(y,z,xerr=y_err,yerr=y_err,fmt=None,marker=None,mew=0,c=(2*badprob-1),
                  alpha=0.3,ecolor='black')
-    plt.scatter(y,z,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='winter'
+    plt.scatter(y,z,marker='o',c=(2*badprob-1),edgecolors='none',zorder=100,cmap='viridis'
                 )
     cb = plt.colorbar()
     cb.set_label('Bad Probability')
@@ -170,7 +170,7 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
                  np.sin(np.median(sampler.flatchain[index,1])),
                  alpha=0.3,color='gray')
 
-    
+
     # plt.subplot(325)
     # plt.hexbin(np.tan(sampler.flatchain[:,1]),
     #            1/np.tan(sampler.flatchain[:,0])/np.sin(sampler.flatchain[:,1]),cmap='copper_r')
@@ -188,7 +188,9 @@ def sampler_plot_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,b
     plt.clf()
 
 
-def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None,badprob=None,nLines = 10,type='r21'):
+def sampler_plot2d_mixture(sampler, data,
+                           figdir = './plots/',suffix='',
+                           name=None, badprob=None, nLines = 10, type='r21'):
     x = data['x']
     y = data['y']
     x_err = data['x_err']
@@ -197,7 +199,7 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
 
     plt.figure(figsize=(9,4))
     plt.subplot(121)
-    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='winter',vmin=0,vmax=1)
+    plt.scatter(x,y,marker='o',c=badprob,edgecolors='none',zorder=100,cmap='viridis',vmin=0,vmax=1)
     plt.errorbar(x,y,xerr=x_err,yerr=y_err,fmt=None,marker='o',mew=0,ecolor='black',
                  c=badprob,alpha=0.3,vmin=0,vmax=1)
     cb = plt.colorbar()
@@ -241,7 +243,7 @@ def sampler_plot2d_mixture(sampler,data,figdir = '../plots/',suffix='',name=None
     if type == 'r31':
         plt.xlabel(r'$R_{31}$')
     plt.tight_layout()
-    
+
     plt.savefig(figdir+name+suffix+'.pdf')
     plt.close()
     plt.clf()

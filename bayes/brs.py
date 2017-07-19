@@ -77,7 +77,7 @@ def logprob3d_xoff_checkbaddata(sampler,x,y,z,x_err,y_err,z_err):
         pbad[idx] = np.percentile(np.exp(badlp)/(np.exp(badlp)+np.exp(goodlp)),50)
     return pbad
 
-def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
+def logprob2d_checkbaddata(sampler,x_in,y_in,x_err_in,y_err_in):
     if sampler.flatchain.shape[1]==7:
         theta,xoff,scatter,badfrac,xbad,ybad,badsig = sampler.flatchain[:,0],\
                                                   sampler.flatchain[:,1],\
@@ -86,7 +86,7 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
                                                   sampler.flatchain[:,4],\
                                                   sampler.flatchain[:,5],\
                                                   sampler.flatchain[:,6]
-                                        
+
 
     if sampler.flatchain.shape[1]==6:
         theta,scatter,badfrac,xbad,ybad,badsig = \
@@ -97,15 +97,16 @@ def logprob2d_checkbaddata(sampler,x,y,x_err,y_err):
             sampler.flatchain[:,4],\
             sampler.flatchain[:,5]
         xoff=0
-    pbad = np.zeros(x.size)
+    pbad = np.zeros(x_in.size)
 
-    for idx,value in enumerate(x):
-        Delta = (np.cos(theta)*y[idx] - np.sin(theta)*(x[idx]+xoff))**2
-        Sigma = (np.sin(theta))**2*(x_err[idx]**2+scatter**2)+\
-                (np.cos(theta))**2*(y_err[idx]**2+scatter**2)
-        goodlp = -0.5*(Delta/Sigma)
-        BadDelta = (y[idx]-ybad)**2+(x[idx]-xbad)**2
-        badlp =-0.5*(BadDelta/(Sigma+badsig**2))
+    for idx, (x, y, x_err, y_err) in enumerate(zip(x_in, y_in, x_err_in, y_err_in)):
+        Delta = (np.cos(theta)*y - np.sin(theta)*(x+xoff))**2
+        Var = (np.sin(theta))**2*(x_err**2 + scatter**2)+\
+            (np.cos(theta))**2*(y_err**2 + scatter**2)
+        goodlp = -0.5*(Delta / Var) - np.log(Var)
+        BadDelta = (y-ybad)**2+(x-xbad)**2
+        badlp =-0.5 * (BadDelta / (Var + badsig**2)) - 0.5 * np.log(Var + badsig**2)
+
         # run percentiles over chains!
         pbad[idx] = np.percentile(badfrac*np.exp(badlp)/((badfrac*np.exp(badlp))+(1-badfrac)*np.exp(goodlp)),50)
 
@@ -173,7 +174,7 @@ def summarize2d(t,sampler21=None,sampler32=None, sampler31 = None):
         t['R31'][-1] = np.median(r31)
         t['R31+'][-1] = scipy.stats.scoreatpercentile(r31,85)-t['R31'][-1]
         t['R31-'][-1] = t['R31'][-1]-scipy.stats.scoreatpercentile(r31,15)
-        
+
 def table_template():
     t = Table(names=('Name','theta','theta+','theta-','phi','phi+','phi-',\
                      'R21-','R21','R21+','R32-','R32','R32+',
@@ -197,7 +198,7 @@ def bygal(fitsfile,spire_cut=3.0):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
-    
+
     cut = -2
 
     t = table_template()
@@ -261,8 +262,8 @@ def bygal(fitsfile,spire_cut=3.0):
             p0[:,4] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
             p0[:,5] = np.percentile(x,95)+np.random.randn(nwalkers)*np.median(x_err)
             p0[:,6] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
-            
-            
+
+
             sampler = emcee.EnsembleSampler(nwalkers, ndim, lp.logprob3d_xoff_scatter_mixture,
                                         args=[x,y,z,x_err,y_err,z_err])
             pos, prob, state = sampler.run_mcmc(p0, 400)
@@ -322,10 +323,10 @@ def bycategory(fitsfile,category=['TDEP','RGAL','SPIRE1','RGALNORM','FUV',
     Signif32 = ((s['CO32']>cut*s['CO32_ERR'])&\
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
-    
+
     sub21 = s[Signif21]
     sub32 = s[Signif32]
-    
+
     molrat = 313*s['CO21']/s['HI']
     sfr = 634*s['HA']+0.00325*s['MIPS24']
     ircolor = (s['MIPS24']/s['PACS3'])
@@ -461,7 +462,7 @@ def bygal2d(fitsfile,spire_cut=10.0,threads=1,withMPI=False):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
-    
+
     cut = -2
 
     t = table_template()
@@ -558,10 +559,25 @@ def bygal2d(fitsfile,spire_cut=10.0,threads=1,withMPI=False):
             t.write('brs.bygal2d.txt',format='ascii')
         it.iternext()
 
+def thielsen(xin, yin):
+    x = xin.ravel()
+    x.shape += (1,)
+    y = yin.ravel()
+    y.shape += (1,)
+    xx = x - x.T
+    yy = y - y.T
+    keep = np.where(xx > 0)
+    phi = np.arctan(yy[keep] / xx[keep])
+    phibar = np.median(phi)
+    madphi = 1.4826 * np.median(np.abs(phi - phibar))
+    return(phibar, madphi)
+
+
 def bycategory2d(fitsfile,category=['FUV',
-                                    'UVCOLOR','IRCOLOR',
-                                    'STELLARSD','PRESSURE','TDEP','MOLRAT','SFR','RGAL',
-                                    'SPIRE1','RGALNORM'],
+                                    'UVCOLOR', 'IRCOLOR',
+                                    'STELLARSD', 'PRESSURE', 'TDEP',
+                                    'MOLRAT', 'SFR', 'RGAL',
+                                    'SPIRE1', 'RGALNORM'],
                  spire_cut=10.0,withMPI = False,threads=1):
     category = np.array(category)
     s = fits.getdata(fitsfile)
@@ -604,7 +620,7 @@ def bycategory2d(fitsfile,category=['FUV',
                 (s['CO21']>cut*s['CO21_ERR'])&\
                 ((s['SPIRE1']> spire_cut)|(np.isnan(s['SPIRE1']))))
 
-    
+
     molrat = 313*s['CO21']/s['HI']
     sfr = 634*s['HA']+0.00325*s['MIPS24']
     ircolor = (s['MIPS24']/s['PACS3'])
@@ -636,7 +652,7 @@ def bycategory2d(fitsfile,category=['FUV',
         elif keyname == 'FUV':
             key_variable = s['GALEXFUV']
         elif keyname == 'UVCOLOR':
-            key_variable = (s['GALEXFUV']/s['GALEXNUV'])
+            key_variable = (s['GALEXFUV'] / s['GALEXNUV'])
         elif keyname == 'SPIRE1':
             key_variable = (s['SPIRE1'])
 
@@ -705,20 +721,23 @@ def bycategory2d(fitsfile,category=['FUV',
                 y_err = sub21['CO21_ERR']
                 data = dict(x=x,x_err=x_err,y=y,y_err=y_err)
 
+
+                phi, phierr = thielsen(x, y)
+
                 ndim, nwalkers = 6,50
                 p0 = np.zeros((nwalkers,ndim))
-                p0[:,0] = np.arctan(np.random.randn(nwalkers)*0.15+0.7)
+                p0[:,0] = np.abs(np.random.randn(nwalkers)*phierr + phi)
                 p0[:,1] = (np.random.randn(nwalkers))**2*(np.median(x_err)**2+np.median(y_err)**2) # scatter
                 p0[:,2] = (np.random.randn(nwalkers)*0.01)**2 # bad fraction
                 p0[:,3] = np.percentile(x,50)+np.random.randn(nwalkers)*np.median(x_err)
                 p0[:,4] = np.percentile(y,50)+np.random.randn(nwalkers)*np.median(y_err)
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
                 if withMPI:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],pool=pool)
                 else:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],threads=threads)
                 pos, prob, state = sampler.run_mcmc(p0, 500)
@@ -748,11 +767,11 @@ def bycategory2d(fitsfile,category=['FUV',
                 p0[:,4] = np.percentile(y,50)+np.random.randn(nwalkers)*np.median(y_err)
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
                 if withMPI:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],pool=pool)
                 else:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],threads=threads)
                 pos, prob, state = sampler.run_mcmc(p0, 400)
@@ -781,11 +800,11 @@ def bycategory2d(fitsfile,category=['FUV',
                 p0[:,4] = np.percentile(y,50)+np.random.randn(nwalkers)*np.median(y_err)
                 p0[:,5] = np.percentile(x,90)+np.median(x_err)*np.random.randn(nwalkers)
                 if withMPI:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],pool=pool)
                 else:
-                    sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+                    sampler = emcee.EnsembleSampler(nwalkers, ndim,
                                                     lp.logprob2d_scatter_mixture,
                                                     args=[x,y,x_err,y_err],threads=threads)
                 pos, prob, state = sampler.run_mcmc(p0, 400)
@@ -797,16 +816,19 @@ def bycategory2d(fitsfile,category=['FUV',
                 splt.sampler_plot2d_mixture(sampler,data,name=keyname+'.'+name+'.31',\
                                             badprob=badprob,type='r31')
                 summarize2d(t,sampler31=sampler)
-            t.write('brs_category.'+keyname+'.txt',format='ascii')
+            t.write('brs_category.'+keyname+'.txt',format='ascii', overwrite=True)
             it.iternext()
         iter2.iternext()
-    pool.close()
+    try:
+        pool.close()
+    except UnboundLocalError:
+        pass
 
 def alldata2d(fitsfile):
     s = fits.getdata(fitsfile)
     hdr = fits.getheader(fitsfile)
     GalNames = np.unique(s['GALNAME'])
-    
+
     cut = -4
     spire_cut=10
     nValid = 3
